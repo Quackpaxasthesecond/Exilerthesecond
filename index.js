@@ -90,4 +90,9 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-client.login(process.env.DISCORD_BOT_TOKEN);
+client.login(process.env.DISCORD_BOT_TOKEN).catch(error => {
+  console.error('Failed to login:', error.message);
+  if (!process.env.DISCORD_BOT_TOKEN) {
+    console.error('DISCORD_BOT_TOKEN is not set in environment variables');
+  }
+});
