@@ -38,6 +38,22 @@ const ROLE_IDS = {
   admin: '1351985637602885734',
 };
 
+// List of special member IDs who get uncle role back when unexiled
+const SPECIAL_MEMBERS = [
+  '1346764665593659393',
+  '1234493339638825054',
+  '1149822228620382248',
+  '1123873768507457536',
+  '696258636602802226',
+  '512964486148390922',
+  '1010180074990993429',
+  '464567511615143962',
+  '977923308387455066',
+  '800291423933038612',
+  '872408669151690755',
+  '1197176029815517257'
+];
+
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
   console.log('Bot is in these servers:');
@@ -79,7 +95,7 @@ client.on('messageCreate', async (message) => {
     }
   }
 
-  // Unexile Command
+  // Unexile Command with special role restoration
   if (command === '-unexile') {
     if (
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
@@ -96,8 +112,14 @@ client.on('messageCreate', async (message) => {
 
     try {
       await target.roles.remove(ROLE_IDS.exiled);
-      await target.roles.add(ROLE_IDS.uncle);
-      message.channel.send(`${target.user.tag} has been unexiled.`);
+
+      if (SPECIAL_MEMBERS.includes(target.id)) {
+        await target.roles.add(ROLE_IDS.uncle);
+        message.channel.send(`${target.user.tag} has been unexiled and granted the *Uncle Refugeers* role again.`);
+      } else {
+        message.channel.send(`${target.user.tag} has been unexiled.`);
+      }
+
     } catch (error) {
       console.error(error);
       message.reply('An error occurred while trying to unexile the user.');
