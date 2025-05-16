@@ -1,4 +1,3 @@
-
 const { Client, GatewayIntentBits } = require('discord.js');
 require('dotenv').config();
 
@@ -43,7 +42,8 @@ client.on('messageCreate', async (message) => {
   if (command === '-exile') {
     if (
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
-      !message.member.roles.cache.has(ROLE_IDS.admin)
+      !message.member.roles.cache.has(ROLE_IDS.admin) &&
+      message.guild.ownerId !== message.author.id
     ) {
       return message.reply("You don't have permission to use this command.");
     }
@@ -68,7 +68,8 @@ client.on('messageCreate', async (message) => {
   if (command === '-unexile') {
     if (
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
-      !message.member.roles.cache.has(ROLE_IDS.admin)
+      !message.member.roles.cache.has(ROLE_IDS.admin) &&
+      message.guild.ownerId !== message.author.id
     ) {
       return message.reply("You don't have permission to use this command.");
     }
