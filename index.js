@@ -76,19 +76,19 @@ client.on('messageCreate', async (message) => {
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
       message.guild.ownerId !== message.author.id
     ) {
-      return message.reply("You don't have permission to use this command.");
+      return message.reply("Bih you aint moderator");
     }
 
     const target = message.mentions.members.first();
     if (!target) {
-      return message.reply('Please mention a valid user to exile.');
+      return message.reply('can you fucking put a vaild user god');
     }
 
     try {
       await target.roles.add(ROLE_IDS.exiled);
       await target.roles.remove(ROLE_IDS.swaggers);
       await target.roles.remove(ROLE_IDS.uncle);
-      message.channel.send(`${target.user.tag} has been exiled.`);
+      message.channel.send(`${target.user.tag} shot dead`);
     } catch (error) {
       console.error(error);
       message.reply('An error occurred while trying to exile the user.');
@@ -102,12 +102,12 @@ client.on('messageCreate', async (message) => {
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
       message.guild.ownerId !== message.author.id
     ) {
-      return message.reply("You don't have permission to use this command.");
+      return message.reply("you aint helping nun");
     }
 
     const target = message.mentions.members.first();
     if (!target) {
-      return message.reply('Please mention a valid user to unexile.');
+      return message.reply('can you fucking put a vaild user god');
     }
 
     try {
@@ -115,7 +115,7 @@ client.on('messageCreate', async (message) => {
 
       if (SPECIAL_MEMBERS.includes(target.id)) {
         await target.roles.add(ROLE_IDS.uncle);
-        message.channel.send(`${target.user.tag} has been unexiled and granted the *Uncle Refugeers* role again.`);
+        message.channel.send(`${target.user.tag} the unc has been unexiled`);
       } else {
         message.channel.send(`${target.user.tag} has been unexiled.`);
       }
