@@ -1,5 +1,15 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 require('dotenv').config();
+const http = require('http');
+
+// Create HTTP server for uptime monitoring
+const server = http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end('Bot is running!');
+});
+server.listen(3000, '0.0.0.0', () => {
+  console.log('HTTP server ready on port 3000');
+});
 
 const client = new Client({
   intents: [
