@@ -30,6 +30,11 @@ const ROLE_IDS = {
 
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
+  console.log('Bot is in these servers:');
+  client.guilds.cache.forEach(guild => {
+    console.log(`- ${guild.name} (${guild.id})`);
+    console.log('  Bot permissions:', guild.members.me.permissions.toArray());
+  });
 });
 
 client.on('messageCreate', async (message) => {
