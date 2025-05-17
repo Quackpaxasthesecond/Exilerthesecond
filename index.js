@@ -104,6 +104,11 @@ client.on('messageCreate', async (message) => {
       return message.reply('Please mention a valid user to exile.');
     }
 
+    // Check if already exiled
+    if (target.roles.cache.has(ROLE_IDS.exiled)) {
+      return message.reply(`${target.user.tag} is already exiled!`);
+    }
+
     try {
       await target.roles.add(ROLE_IDS.exiled);
       await target.roles.remove(ROLE_IDS.swaggers);
@@ -130,9 +135,14 @@ client.on('messageCreate', async (message) => {
       return message.reply('Please mention a valid user to unexile.');
     }
 
+    // Check if not exiled
+    if (!target.roles.cache.has(ROLE_IDS.exiled)) {
+      return message.reply(`${target.user.tag} is not exiled!`);
+    }
+
     try {
       await target.roles.remove(ROLE_IDS.exiled);
-      
+
       if (SPECIAL_MEMBERS.includes(target.id)) {
         await target.roles.add(ROLE_IDS.uncle);
         message.channel.send(`${target.user.tag} the unc has been unexiled`);
