@@ -1,23 +1,16 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 require('dotenv').config();
-const http = require('http');
 const sqlite3 = require('sqlite3').verbose();
+const http = require('http');
 
-// SQLite DB setup
-const db = new sqlite3.Database('./exiles.db', (err) => {
-  if (err) return console.error('DB Error:', err.message);
-  console.log('Connected to SQLite DB.');
-});
-db.run(`CREATE TABLE IF NOT EXISTS exiles (
+// Create SQLite DB for tracking exiles
+const db = new sqlite3.Database('./exiles.db');
+db.run(`CREATE TABLE IF NOT EXISTS exile_counts (
   user_id TEXT PRIMARY KEY,
-  count INTEGER
+  count INTEGER DEFAULT 0
 )`);
-db.run(`CREATE TABLE IF NOT EXISTS exilers (
-  user_id TEXT PRIMARY KEY,
-  count INTEGER
-)`); // <-- NEW TABLE
 
-// HTTP server for uptime pinging
+// Create HTTP server for uptime monitoring
 const server = http.createServer((req, res) => {
   res.writeHead(200);
   res.end('Bot is running!');
@@ -44,10 +37,18 @@ const ROLE_IDS = {
 };
 
 const SPECIAL_MEMBERS = [
-  '1346764665593659393', '1234493339638825054', '1149822228620382248',
-  '1123873768507457536', '696258636602802226', '512964486148390922',
-  '1010180074990993429', '464567511615143962', '977923308387455066',
-  '800291423933038612', '872408669151690755', '1197176029815517257',
+  '1346764665593659393',
+  '1234493339638825054',
+  '1149822228620382248',
+  '1123873768507457536',
+  '696258636602802226',
+  '512964486148390922',
+  '1010180074990993429',
+  '464567511615143962',
+  '977923308387455066',
+  '800291423933038612',
+  '872408669151690755',
+  '1197176029815517257',
 ];
 
 client.once('ready', () => {
@@ -62,20 +63,15 @@ client.on('messageCreate', async (message) => {
   const command = args.shift().toLowerCase();
 
   if (command === '-help') {
-    if (
-      !message.member.roles.cache.has(ROLE_IDS.mod) &&
-      !message.member.roles.cache.has(ROLE_IDS.admin) &&
-      message.guild.ownerId !== message.author.id
-    ) return message.reply("<:silence:1182339569874636841>");
-
-    return message.channel.send(`
+    const helpMessage = `
 **Bot Commands:**
 - \`-exile @user\` : Exile a user (mods/admins only)
 - \`-unexile @user\` : Unexile a user (mods/admins only)
-- \`-exileboard\` : View exile leaderboard
-- \`-myexiles\` : View how many users you have exiled
-- \`-help\` : Show this help message (mods/admins only)
-    `);
+- \`-myexiles\` : See your exile count (mods/admins only)
+- \`-leaderboard\` : See the exile leaderboard
+- \`-help\` : Show this help message
+    `;
+    message.channel.send(helpMessage);
   }
 
   if (command === '-exile') {
@@ -83,31 +79,32 @@ client.on('messageCreate', async (message) => {
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
       message.guild.ownerId !== message.author.id
-    ) return message.reply("you aint exiling anyone buddy bro. <:silence:1182339569874636841>");
+    ) {
+      return message.reply("you aint exiling anyone buddy.");
+    }
 
     const target = message.mentions.members.first();
-    if (!target) return message.reply('Please mention a valid user to exile.');
-    if (target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.tag} is already exiled!`);
+    if (!target) return message.reply('Mention someone to exile.');
+
+    if (target.roles.cache.has(ROLE_IDS.exiled)) {
+      return message.reply(`${target.user.tag} is already exiled.`);
+    }
 
     try {
       await target.roles.add(ROLE_IDS.exiled);
       await target.roles.remove(ROLE_IDS.swaggers);
       await target.roles.remove(ROLE_IDS.uncle);
 
-      // Update exile count
-      db.run(`INSERT INTO exiles (user_id, count)
-              VALUES (?, 1)
-              ON CONFLICT(user_id) DO UPDATE SET count = count + 1`, [target.id]);
-
-      // Update exiler count
-      db.run(`INSERT INTO exilers (user_id, count)
-              VALUES (?, 1)
-              ON CONFLICT(user_id) DO UPDATE SET count = count + 1`, [message.author.id]);
+      db.run(
+        `INSERT INTO exile_counts (user_id, count) VALUES (?, 1)
+         ON CONFLICT(user_id) DO UPDATE SET count = count + 1`,
+        [target.id]
+      );
 
       message.channel.send(`${target.user.tag} has been exiled.`);
-    } catch (error) {
-      console.error(error);
-      message.reply('An error occurred while trying to exile the user.');
+    } catch (err) {
+      console.error(err);
+      message.reply('Could not exile user.');
     }
   }
 
@@ -116,53 +113,64 @@ client.on('messageCreate', async (message) => {
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
       message.guild.ownerId !== message.author.id
-    ) return message.reply("nice try buddy");
+    ) {
+      return message.reply('nice try buddy');
+    }
 
     const target = message.mentions.members.first();
-    if (!target) return message.reply('Please mention a valid user to unexile.');
-    if (!target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.tag} is not exiled!`);
+    if (!target) return message.reply('Mention someone to unexile.');
+
+    if (!target.roles.cache.has(ROLE_IDS.exiled)) {
+      return message.reply(`${target.user.tag} is not exiled.`);
+    }
 
     try {
       await target.roles.remove(ROLE_IDS.exiled);
       if (SPECIAL_MEMBERS.includes(target.id)) {
         await target.roles.add(ROLE_IDS.uncle);
-        message.channel.send(`${target.user.tag} the unc has been unexiled`);
+        message.channel.send(`${target.user.tag} the unc has been unexiled.`);
       } else {
         message.channel.send(`${target.user.tag} has been unexiled.`);
       }
-    } catch (error) {
-      console.error(error);
-      message.reply('An error occurred while trying to unexile the user.');
+    } catch (err) {
+      console.error(err);
+      message.reply('Could not unexile user.');
     }
   }
 
-  if (command === '-exileboard') {
-    db.all(`SELECT user_id, count FROM exiles ORDER BY count DESC LIMIT 10`, async (err, rows) => {
+  if (command === '-myexiles') {
+    if (
+      !message.member.roles.cache.has(ROLE_IDS.mod) &&
+      !message.member.roles.cache.has(ROLE_IDS.admin) &&
+      message.guild.ownerId !== message.author.id
+    ) {
+      return message.reply('buddy you are not a moderator. slow down 😅😅😅');
+    }
+
+    const userId = message.mentions.users.first()?.id || message.author.id;
+
+    db.get(`SELECT count FROM exile_counts WHERE user_id = ?`, [userId], (err, row) => {
       if (err) {
         console.error(err);
-        return message.channel.send('Failed to fetch leaderboard.');
+        return message.reply('Error retrieving data.');
       }
-
-      if (!rows.length) return message.channel.send('No exiles have occurred yet.');
-
-      const leaderboard = await Promise.all(rows.map(async (row, index) => {
-        const user = await client.users.fetch(row.user_id).catch(() => null);
-        const name = user ? user.tag : `Unknown (${row.user_id})`;
-        return `**#${index + 1}** - ${name} — ${row.count} exile(s)`;
-      }));
-
-      message.channel.send(`📜 **Exile Leaderboard** 📜\n${leaderboard.join('\n')}`);
+      const count = row?.count || 0;
+      message.reply(`<@${userId}> has been exiled **${count}** times.`);
     });
   }
 
-  if (command === '-myexiles') {
-    db.get(`SELECT count FROM exilers WHERE user_id = ?`, [message.author.id], (err, row) => {
+  if (command === '-leaderboard') {
+    db.all(`SELECT user_id, count FROM exile_counts ORDER BY count DESC LIMIT 10`, [], (err, rows) => {
       if (err) {
         console.error(err);
-        return message.reply('Failed to fetch your exile stats.');
+        return message.reply('Error loading leaderboard.');
       }
-      const count = row ? row.count : 0;
-      message.reply(`You have exiled ${count} user(s).`);
+      if (!rows.length) return message.reply('No exiles recorded yet.');
+
+      const leaderboard = rows
+        .map((row, index) => `**${index + 1}.** <@${row.user_id}> — ${row.count} times`)
+        .join('\n');
+      message.channel.send(`** Exile Leaderboard <:crying:1285606636853137560> **\n${leaderboard}`);
     });
   }
 });
