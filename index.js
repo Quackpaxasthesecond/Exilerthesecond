@@ -1,16 +1,9 @@
 const { Client, GatewayIntentBits } = require('discord.js');
-require('dotenv').config();
 const sqlite3 = require('sqlite3').verbose();
+require('dotenv').config();
 const http = require('http');
 
-// Create SQLite DB for tracking exiles
-const db = new sqlite3.Database('./exiles.db');
-db.run(`CREATE TABLE IF NOT EXISTS exile_counts (
-  user_id TEXT PRIMARY KEY,
-  count INTEGER DEFAULT 0
-)`);
-
-// Create HTTP server for uptime monitoring
+// HTTP server for uptime monitoring
 const server = http.createServer((req, res) => {
   res.writeHead(200);
   res.end('Bot is running!');
@@ -28,6 +21,18 @@ const client = new Client({
   ],
 });
 
+// SQLite DB
+const db = new sqlite3.Database('./exiles.db', (err) => {
+  if (err) console.error(err);
+  else console.log('Connected to SQLite database.');
+});
+
+db.run(`CREATE TABLE IF NOT EXISTS exiles (
+  issuer TEXT NOT NULL,
+  target TEXT NOT NULL,
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+)`);
+
 const ROLE_IDS = {
   exiled: '1208808796890337350',
   swaggers: '1202948499193335828',
@@ -37,18 +42,10 @@ const ROLE_IDS = {
 };
 
 const SPECIAL_MEMBERS = [
-  '1346764665593659393',
-  '1234493339638825054',
-  '1149822228620382248',
-  '1123873768507457536',
-  '696258636602802226',
-  '512964486148390922',
-  '1010180074990993429',
-  '464567511615143962',
-  '977923308387455066',
-  '800291423933038612',
-  '872408669151690755',
-  '1197176029815517257',
+  '1346764665593659393', '1234493339638825054', '1149822228620382248',
+  '1123873768507457536', '696258636602802226', '512964486148390922',
+  '1010180074990993429', '464567511615143962', '977923308387455066',
+  '800291423933038612', '872408669151690755', '1197176029815517257',
 ];
 
 client.once('ready', () => {
@@ -67,11 +64,10 @@ client.on('messageCreate', async (message) => {
 **Bot Commands:**
 - \`-exile @user\` : Exile a user (mods/admins only)
 - \`-unexile @user\` : Unexile a user (mods/admins only)
-- \`-myexiles\` : See your exile count (mods/admins only)
-- \`-leaderboard\` : See the exile leaderboard
-- \`-help\` : Show this help message
+- \`-myexiles\` : Show how many people you exiled (mods/admins only)
+- \`-leaderboard\` : Show the top exiled users
     `;
-    message.channel.send(helpMessage);
+    return message.channel.send(helpMessage);
   }
 
   if (command === '-exile') {
@@ -79,32 +75,29 @@ client.on('messageCreate', async (message) => {
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
       message.guild.ownerId !== message.author.id
-    ) {
-      return message.reply("you aint exiling anyone buddy.");
-    }
+    ) return message.reply("you aint exiling anyone buddy bro.");
 
     const target = message.mentions.members.first();
-    if (!target) return message.reply('Mention someone to exile.');
-
-    if (target.roles.cache.has(ROLE_IDS.exiled)) {
-      return message.reply(`${target.user.tag} is already exiled.`);
-    }
+    if (!target) return message.reply('Please mention a valid user to exile.');
+    if (target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.tag} is already exiled!`);
 
     try {
       await target.roles.add(ROLE_IDS.exiled);
       await target.roles.remove(ROLE_IDS.swaggers);
       await target.roles.remove(ROLE_IDS.uncle);
-
-      db.run(
-        `INSERT INTO exile_counts (user_id, count) VALUES (?, 1)
-         ON CONFLICT(user_id) DO UPDATE SET count = count + 1`,
-        [target.id]
-      );
-
       message.channel.send(`${target.user.tag} has been exiled.`);
+
+      // Record exile in the database
+      db.run(
+        `INSERT INTO exiles (issuer, target) VALUES (?, ?)`,
+        [message.author.id, target.id],
+        (err) => {
+          if (err) console.error(err);
+        }
+      );
     } catch (err) {
       console.error(err);
-      message.reply('Could not exile user.');
+      message.reply('An error occurred while trying to exile the user.');
     }
   }
 
@@ -113,28 +106,23 @@ client.on('messageCreate', async (message) => {
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
       message.guild.ownerId !== message.author.id
-    ) {
-      return message.reply('nice try buddy');
-    }
+    ) return message.reply("nice try buddy");
 
     const target = message.mentions.members.first();
-    if (!target) return message.reply('Mention someone to unexile.');
-
-    if (!target.roles.cache.has(ROLE_IDS.exiled)) {
-      return message.reply(`${target.user.tag} is not exiled.`);
-    }
+    if (!target) return message.reply('Please mention a valid user to unexile.');
+    if (!target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.tag} is not exiled!`);
 
     try {
       await target.roles.remove(ROLE_IDS.exiled);
       if (SPECIAL_MEMBERS.includes(target.id)) {
         await target.roles.add(ROLE_IDS.uncle);
-        message.channel.send(`${target.user.tag} the unc has been unexiled.`);
+        message.channel.send(`${target.user.tag} the unc has been unexiled`);
       } else {
         message.channel.send(`${target.user.tag} has been unexiled.`);
       }
     } catch (err) {
       console.error(err);
-      message.reply('Could not unexile user.');
+      message.reply('An error occurred while trying to unexile the user.');
     }
   }
 
@@ -144,35 +132,43 @@ client.on('messageCreate', async (message) => {
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
       message.guild.ownerId !== message.author.id
     ) {
-      return message.reply('buddy you are not a moderator. slow down 😅😅😅');
+      return message.reply("buddy you are not a moderator. slow down 😅😅😅");
     }
-
-    const userId = message.mentions.users.first()?.id || message.author.id;
-
-    db.get(`SELECT count FROM exile_counts WHERE user_id = ?`, [userId], (err, row) => {
+  
+    db.get(`SELECT COUNT(*) as count FROM exiles WHERE issuer = ?`, [message.author.id], (err, row) => {
       if (err) {
         console.error(err);
-        return message.reply('Error retrieving data.');
+        return message.reply('Error checking your exile record.');
       }
-      const count = row?.count || 0;
-      message.reply(`<@${userId}> has been exiled **${count}** times.`);
+      const count = row ? row.count : 0;
+      message.reply(`you've murdered ${count} people.`);
     });
   }
 
   if (command === '-leaderboard') {
-    db.all(`SELECT user_id, count FROM exile_counts ORDER BY count DESC LIMIT 10`, [], (err, rows) => {
-      if (err) {
-        console.error(err);
-        return message.reply('Error loading leaderboard.');
-      }
-      if (!rows.length) return message.reply('No exiles recorded yet.');
+    db.all(
+      `SELECT target, COUNT(*) as exile_count FROM exiles GROUP BY target ORDER BY exile_count DESC LIMIT 10`,
+      [],
+      (err, rows) => {
+        if (err) {
+          console.error(err);
+          return message.channel.send('An error occurred while fetching the leaderboard.');
+        }
 
-      const leaderboard = rows
-        .map((row, index) => `**${index + 1}.** <@${row.user_id}> — ${row.count} times`)
-        .join('\n');
-      message.channel.send(`** Exile Leaderboard <:crying:1285606636853137560> **\n${leaderboard}`);
-    });
+        if (rows.length === 0) {
+          return message.channel.send('No exiles have been recorded yet.');
+        }
+
+        const leaderboard = rows
+          .map((row, index) => `${index + 1}. <@${row.target}> - ${row.exile_count} exiles`)
+          .join('\n');
+
+        message.channel.send(`**Exile Leaderboard <:crying:1285606636853137560>**:\n${leaderboard}`);
+      }
+    );
   }
 });
 
-client.login(process.env.DISCORD_BOT_TOKEN);
+client.login(process.env.DISCORD_BOT_TOKEN).catch(err => {
+  console.error('Login failed:', err.message);
+});
