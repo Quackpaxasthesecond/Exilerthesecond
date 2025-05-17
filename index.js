@@ -12,6 +12,10 @@ db.run(`CREATE TABLE IF NOT EXISTS exiles (
   user_id TEXT PRIMARY KEY,
   count INTEGER
 )`);
+db.run(`CREATE TABLE IF NOT EXISTS exilers (
+  user_id TEXT PRIMARY KEY,
+  count INTEGER
+)`); // <-- NEW TABLE
 
 // HTTP server for uptime pinging
 const server = http.createServer((req, res) => {
@@ -69,6 +73,7 @@ client.on('messageCreate', async (message) => {
 - \`-exile @user\` : Exile a user (mods/admins only)
 - \`-unexile @user\` : Unexile a user (mods/admins only)
 - \`-exileboard\` : View exile leaderboard
+- \`-myexiles\` : View how many users you have exiled
 - \`-help\` : Show this help message (mods/admins only)
     `);
   }
@@ -93,6 +98,11 @@ client.on('messageCreate', async (message) => {
       db.run(`INSERT INTO exiles (user_id, count)
               VALUES (?, 1)
               ON CONFLICT(user_id) DO UPDATE SET count = count + 1`, [target.id]);
+
+      // Update exiler count
+      db.run(`INSERT INTO exilers (user_id, count)
+              VALUES (?, 1)
+              ON CONFLICT(user_id) DO UPDATE SET count = count + 1`, [message.author.id]);
 
       message.channel.send(`${target.user.tag} has been exiled.`);
     } catch (error) {
@@ -142,6 +152,17 @@ client.on('messageCreate', async (message) => {
       }));
 
       message.channel.send(`📜 **Exile Leaderboard** 📜\n${leaderboard.join('\n')}`);
+    });
+  }
+
+  if (command === '-myexiles') {
+    db.get(`SELECT count FROM exilers WHERE user_id = ?`, [message.author.id], (err, row) => {
+      if (err) {
+        console.error(err);
+        return message.reply('Failed to fetch your exile stats.');
+      }
+      const count = row ? row.count : 0;
+      message.reply(`You have exiled ${count} user(s).`);
     });
   }
 });
