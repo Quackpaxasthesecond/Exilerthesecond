@@ -38,7 +38,7 @@ const ROLE_IDS = {
   admin: '1351985637602885734',
 };
 
-// List of special member IDs who get uncle role back when unexiled
+// List of special member IDs that get the Uncle Refugeers role automatically on unexile
 const SPECIAL_MEMBERS = [
   '1346764665593659393',
   '1234493339638825054',
@@ -51,11 +51,12 @@ const SPECIAL_MEMBERS = [
   '977923308387455066',
   '800291423933038612',
   '872408669151690755',
-  '1197176029815517257'
+  '1197176029815517257',
 ];
 
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
+  client.user.setActivity('Exiling buddies.'); // Bot activity status
   console.log('Bot is in these servers:');
   client.guilds.cache.forEach(guild => {
     console.log(`- ${guild.name} (${guild.id})`);
@@ -69,6 +70,25 @@ client.on('messageCreate', async (message) => {
   const args = message.content.trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
+  if (command === '-help') {
+    if (
+      !message.member.roles.cache.has(ROLE_IDS.mod) &&
+      !message.member.roles.cache.has(ROLE_IDS.admin) &&
+      message.guild.ownerId !== message.author.id
+    ) {
+      return message.reply("<:silence:1182339569874636841>");
+    }
+
+    const helpMessage = `
+**Bot Commands:**
+- \`-exile @user\` : Exile a user (mods/admins only)
+- \`-unexile @user\` : Unexile a user (mods/admins only)
+- \`-help\` : Show this help message (mods/admins only)
+    `;
+
+    message.channel.send(helpMessage);
+  }
+
   // Exile Command
   if (command === '-exile') {
     if (
@@ -76,50 +96,49 @@ client.on('messageCreate', async (message) => {
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
       message.guild.ownerId !== message.author.id
     ) {
-      return message.reply("Bih you aint moderator");
+      return message.reply("you aint exiling anyone buddy bro. <:silence:1182339569874636841>");
     }
 
     const target = message.mentions.members.first();
     if (!target) {
-      return message.reply('can you fucking put a vaild user god');
+      return message.reply('Please mention a valid user to exile.');
     }
 
     try {
       await target.roles.add(ROLE_IDS.exiled);
       await target.roles.remove(ROLE_IDS.swaggers);
       await target.roles.remove(ROLE_IDS.uncle);
-      message.channel.send(`${target.user.tag} shot dead`);
+      message.channel.send(`${target.user.tag} has been exiled.`);
     } catch (error) {
       console.error(error);
       message.reply('An error occurred while trying to exile the user.');
     }
   }
 
-  // Unexile Command with special role restoration
+  // Unexile Command
   if (command === '-unexile') {
     if (
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
       message.guild.ownerId !== message.author.id
     ) {
-      return message.reply("you aint helping nun");
+      return message.reply("nice try buddy");
     }
 
     const target = message.mentions.members.first();
     if (!target) {
-      return message.reply('can you fucking put a vaild user god');
+      return message.reply('Please mention a valid user to unexile.');
     }
 
     try {
       await target.roles.remove(ROLE_IDS.exiled);
-
+      
       if (SPECIAL_MEMBERS.includes(target.id)) {
         await target.roles.add(ROLE_IDS.uncle);
         message.channel.send(`${target.user.tag} the unc has been unexiled`);
       } else {
         message.channel.send(`${target.user.tag} has been unexiled.`);
       }
-
     } catch (error) {
       console.error(error);
       message.reply('An error occurred while trying to unexile the user.');
