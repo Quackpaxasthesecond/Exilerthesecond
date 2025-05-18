@@ -66,6 +66,7 @@ client.on('messageCreate', async (message) => {
 - \`-unexile @user\` : Unexile a user (mods/admins only)
 - \`-myexiles\` : Show how many people you exiled (mods/admins only)
 - \`-leaderboard\` : Show the top exiled users
+- \`-fat\` : Randomly calls someone fat
     `;
     return message.channel.send(helpMessage);
   }
@@ -79,6 +80,7 @@ client.on('messageCreate', async (message) => {
 
     const target = message.mentions.members.first();
     if (!target) return message.reply('Please mention a valid user to exile.');
+    if (target.user.bot) return message.reply("you can't exile a bot. even if it's huge.");
     if (target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.tag} is already exiled!`);
 
     try {
@@ -134,7 +136,7 @@ client.on('messageCreate', async (message) => {
     ) {
       return message.reply("buddy you are not a moderator. slow down 😅😅😅");
     }
-  
+
     db.get(`SELECT COUNT(*) as count FROM exiles WHERE issuer = ?`, [message.author.id], (err, row) => {
       if (err) {
         console.error(err);
@@ -166,6 +168,21 @@ client.on('messageCreate', async (message) => {
         message.channel.send(`**Exile Leaderboard <:crying:1285606636853137560>**:\n${leaderboard}`);
       }
     );
+  }
+
+  if (command === '-fat') {
+    const members = await message.guild.members.fetch();
+    const filtered = members.filter(m => !m.user.bot && m.id !== message.author.id);
+    if (filtered.size === 0) return message.reply("you will die....");
+
+    const randomMember = filtered.random();
+    const roasts = [
+      `${randomMember} is fat and huge.`,
+      `${randomMember} weighs 700 pounds.`,
+      `${randomMember} is huge in mass.`,
+    ];
+    const roast = roasts[Math.floor(Math.random() * roasts.length)];
+    message.channel.send(roast);
   }
 });
 
