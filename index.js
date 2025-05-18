@@ -48,6 +48,20 @@ const SPECIAL_MEMBERS = [
   '800291423933038612', '872408669151690755', '1197176029815517257',
 ];
 
+const cooldowns = new Map();
+
+function checkCooldown(userId, command, message) {
+  const key = `${userId}_${command}`;
+  const now = Date.now();
+  const cooldown = cooldowns.get(key);
+  if (cooldown && now - cooldown < 5000) {
+    message.reply('slow down buddy. you are clicking too fast.');
+    return true;
+  }
+  cooldowns.set(key, now);
+  return false;
+}
+
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
   client.user.setActivity('Exiling buddies.');
@@ -60,6 +74,7 @@ client.on('messageCreate', async (message) => {
   const command = args.shift().toLowerCase();
 
   if (command === '-help') {
+    if (checkCooldown(message.author.id, command, message)) return;
     const helpMessage = `
 **Bot Commands:**
 - \`-exile @user\` : Exile a user (mods/admins only)
@@ -72,6 +87,8 @@ client.on('messageCreate', async (message) => {
   }
 
   if (command === '-exile') {
+    if (checkCooldown(message.author.id, command, message)) return;
+
     if (
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
@@ -80,16 +97,15 @@ client.on('messageCreate', async (message) => {
 
     const target = message.mentions.members.first();
     if (!target) return message.reply('Please mention a valid user to exile.');
-    if (target.user.bot) return message.reply("you can't exile a bot. even if it's huge.");
-    if (target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.tag} is already exiled!`);
+    if (target.user.bot) return; // Silently ignore bot exile attempt
+    if (target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.username} is already exiled!`);
 
     try {
       await target.roles.add(ROLE_IDS.exiled);
       await target.roles.remove(ROLE_IDS.swaggers);
       await target.roles.remove(ROLE_IDS.uncle);
-      message.channel.send(`${target.user.tag} has been exiled.`);
+      message.channel.send(`${target.user.username} has been exiled.`);
 
-      // Record exile in the database
       db.run(
         `INSERT INTO exiles (issuer, target) VALUES (?, ?)`,
         [message.author.id, target.id],
@@ -104,6 +120,8 @@ client.on('messageCreate', async (message) => {
   }
 
   if (command === '-unexile') {
+    if (checkCooldown(message.author.id, command, message)) return;
+
     if (
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
@@ -112,15 +130,15 @@ client.on('messageCreate', async (message) => {
 
     const target = message.mentions.members.first();
     if (!target) return message.reply('Please mention a valid user to unexile.');
-    if (!target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.tag} is not exiled!`);
+    if (!target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.username} is not exiled!`);
 
     try {
       await target.roles.remove(ROLE_IDS.exiled);
       if (SPECIAL_MEMBERS.includes(target.id)) {
         await target.roles.add(ROLE_IDS.uncle);
-        message.channel.send(`${target.user.tag} the unc has been unexiled`);
+        message.channel.send(`${target.user.username} the unc has been unexiled`);
       } else {
-        message.channel.send(`${target.user.tag} has been unexiled.`);
+        message.channel.send(`${target.user.username} has been unexiled.`);
       }
     } catch (err) {
       console.error(err);
@@ -129,6 +147,8 @@ client.on('messageCreate', async (message) => {
   }
 
   if (command === '-myexiles') {
+    if (checkCooldown(message.author.id, command, message)) return;
+
     if (
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
@@ -148,10 +168,12 @@ client.on('messageCreate', async (message) => {
   }
 
   if (command === '-leaderboard') {
+    if (checkCooldown(message.author.id, command, message)) return;
+
     db.all(
       `SELECT target, COUNT(*) as exile_count FROM exiles GROUP BY target ORDER BY exile_count DESC LIMIT 10`,
       [],
-      (err, rows) => {
+      async (err, rows) => {
         if (err) {
           console.error(err);
           return message.channel.send('An error occurred while fetching the leaderboard.');
@@ -161,25 +183,31 @@ client.on('messageCreate', async (message) => {
           return message.channel.send('No exiles have been recorded yet.');
         }
 
-        const leaderboard = rows
-          .map((row, index) => `${index + 1}. <@${row.target}> - ${row.exile_count} exiles`)
-          .join('\n');
+        let leaderboard = '**Exile Leaderboard <:crying:1285606636853137560>**:\n';
 
-        message.channel.send(`**Exile Leaderboard <:crying:1285606636853137560>**:\n${leaderboard}`);
+        for (let i = 0; i < rows.length; i++) {
+          const member = await message.guild.members.fetch(rows[i].target).catch(() => null);
+          const name = member ? member.user.username : `Unknown (${rows[i].target})`;
+          leaderboard += `${i + 1}. ${name} - ${rows[i].exile_count} exiles\n`;
+        }
+
+        message.channel.send(leaderboard);
       }
     );
   }
 
   if (command === '-fat') {
+    if (checkCooldown(message.author.id, command, message)) return;
+
     const members = await message.guild.members.fetch();
     const filtered = members.filter(m => !m.user.bot && m.id !== message.author.id);
     if (filtered.size === 0) return message.reply("you will die....");
 
     const randomMember = filtered.random();
     const roasts = [
-      `${randomMember} is fat and huge.`,
-      `${randomMember} weighs 700 pounds.`,
-      `${randomMember} is huge in mass.`,
+      `${randomMember.user.username} is fat and huge.`,
+      `${randomMember.user.username} weighs 700 pounds.`,
+      `${randomMember.user.username} is huge in mass.`,
     ];
     const roast = roasts[Math.floor(Math.random() * roasts.length)];
     message.channel.send(roast);
