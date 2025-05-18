@@ -236,7 +236,7 @@ client.on('messageCreate', async (message) => {
       `https://cdn.discordapp.com/attachments/1221441946615152680/1281235855843000421/goku.jpg?ex=682b29e0&is=6829d860&hm=af44c68f2d3c744309aec9879196f352976600845487a117efacf19160d87645&`,
       `https://cdn.discordapp.com/attachments/1221441946615152680/1281233486291927102/dyson_vacuum.png?ex=682b27ab&is=6829d62b&hm=a0235b1e4f2e25aa35b5d10422d486e6f57c42a56bce0285a23b739e79720dd0&`,
       `https://cdn.discordapp.com/attachments/1064378659579899925/1273250349049712731/copy_85B464E9-5340-42B2-8BCC-BF0044E4EE9A.gif?ex=682b1dcb&is=6829cc4b&hm=d6e7057e59727c9e15823dfeb2bcf557974eba99683596267752e2fca26e40d3&`,
-      `sybau bro 🥀🥀🥀🥀`
+      `sybau bro 🥀🥀🥀🥀`,
       `https://cdn.discordapp.com/attachments/1202269251621097576/1373609947673268224/attachment-7.gif?ex=682b0973&is=6829b7f3&hm=54930ad2074e3862c27ce7a88dbbcee7f40db88582ecfde101edc8d27697ff96&`,
     ];
     const roast = roasts[Math.floor(Math.random() * roasts.length)];
