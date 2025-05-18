@@ -208,6 +208,17 @@ client.on('messageCreate', async (message) => {
       `${randomMember.user.username} is fat and huge.`,
       `${randomMember.user.username} weighs 700 pounds.`,
       `${randomMember.user.username} is huge in mass.`,
+      `${randomMember.user.username} Is big and round`,
+      `${randomMember.user.username} has their own center of mass`,
+      `${randomMember.user.username} is morbidly a beast`,
+      `${randomMember.user.username}'s pronouns are lbs/kg/tons.`,
+      `${randomMember.user.username} is usagi.`,
+      `${randomMember.user.username} will eventually turn into a star with their mass`,
+      `${randomMember.user.username} has their own gravitational force`,
+      `${randomMember.user.username} is huge in mass.`,
+      `${randomMember.user.username} has an orbit around them`,
+      `${randomMember.user.username} is Fat Bald Friend.`,
+      `https://cdn.discordapp.com/attachments/1202269251621097576/1373609947673268224/attachment-7.gif?ex=682b0973&is=6829b7f3&hm=54930ad2074e3862c27ce7a88dbbcee7f40db88582ecfde101edc8d27697ff96&`,
     ];
     const roast = roasts[Math.floor(Math.random() * roasts.length)];
     message.channel.send(roast);
