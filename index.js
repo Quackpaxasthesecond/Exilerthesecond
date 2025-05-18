@@ -238,10 +238,10 @@ client.on('messageCreate', async (message) => {
       `https://cdn.discordapp.com/attachments/1064378659579899925/1273250349049712731/copy_85B464E9-5340-42B2-8BCC-BF0044E4EE9A.gif?ex=682b1dcb&is=6829cc4b&hm=d6e7057e59727c9e15823dfeb2bcf557974eba99683596267752e2fca26e40d3&`,
       `sybau bro 🥀🥀🥀🥀`,
       `https://cdn.discordapp.com/attachments/1202269251621097576/1373609947673268224/attachment-7.gif?ex=682b0973&is=6829b7f3&hm=54930ad2074e3862c27ce7a88dbbcee7f40db88582ecfde101edc8d27697ff96&`,
-`https://cdn.discordapp.com/attachments/1351980844579033180/1373685945764675624/cachedVideo.mov?ex=682b503b&is=6829febb&hm=e2d07a2434830d8e2e1a1a55da5f5f8798691854a6ed4efe2b862ca57bf063f6&`,
-`https://cdn.discordapp.com/attachments/1351980844579033180/1373686778955038720/snapins-ai_3615571726075825390.mp4?ex=682b5101&is=6829ff81&hm=2cdaad98516cb1a76c665fce39f42467f2b56c0707aac886f484c2007570931c&`,
-`https://cdn.discordapp.com/attachments/1351980844579033180/1373686779445645442/nectarplasm_1747139048582.mov?ex=682b5102&is=6829ff82&hm=750037a46c4bb80fe4e734742d8f421958f78a75773befb3a1f593fcf548645f&`,
-`https://cdn.discordapp.com/attachments/1351980844579033180/1373686779839774851/B4Efp2SCMAAvEQH.jpg?ex=682b5102&is=6829ff82&hm=dc446216c6aa1f28b6f29e7d3bd0f37612a0583e19f9d1c0b1564e9285717d52&`,
+      `https://cdn.discordapp.com/attachments/1351980844579033180/1373685945764675624/cachedVideo.mov?ex=682b503b&is=6829febb&hm=e2d07a2434830d8e2e1a1a55da5f5f8798691854a6ed4efe2b862ca57bf063f6&`,
+      `https://cdn.discordapp.com/attachments/1351980844579033180/1373686778955038720/snapins-ai_3615571726075825390.mp4?ex=682b5101&is=6829ff81&hm=2cdaad98516cb1a76c665fce39f42467f2b56c0707aac886f484c2007570931c&`,
+      `https://cdn.discordapp.com/attachments/1351980844579033180/1373686779445645442/nectarplasm_1747139048582.mov?ex=682b5102&is=6829ff82&hm=750037a46c4bb80fe4e734742d8f421958f78a75773befb3a1f593fcf548645f&`,
+      `https://cdn.discordapp.com/attachments/1351980844579033180/1373686779839774851/B4Efp2SCMAAvEQH.jpg?ex=682b5102&is=6829ff82&hm=dc446216c6aa1f28b6f29e7d3bd0f37612a0583e19f9d1c0b1564e9285717d52&`,
     ];
     const roast = roasts[Math.floor(Math.random() * roasts.length)];
     message.channel.send(roast);
