@@ -224,7 +224,7 @@ client.on('messageCreate', async (message) => {
       `https://cdn.discordapp.com/attachments/1221441946615152680/1372776697753239632/booty.mp4?ex=682aa46d&is=682952ed&hm=a4e572d784abf0d8d5ba08eae1ea826ef0a61dbfd5f38c9eb4662fa5cc78d0f3&`,
       `https://cdn.discordapp.com/attachments/1351976782131363880/1372942743780724826/image.png?ex=682b3f12&is=6829ed92&hm=a608e3473c1e0971a81c15d4cda73c90471490b9d478439e651b129a1f27a06d&`,
       `https://cdn.discordapp.com/attachments/1351976782131363880/1370433056703385640/file.png?ex=682aaf7e&is=68295dfe&hm=73239c1dd6f358b82065059215a1c683d5ee0b6aeee0c0f19a2dfddfe53df51c&`,
-      `https://d.vxtwitter.com/i/status/1831897540524114354`,
+      `https://cdn.discordapp.com/attachments/1351980844579033180/1373685945764675624/cachedVideo.mov?ex=682b503b&is=6829febb&hm=e2d07a2434830d8e2e1a1a55da5f5f8798691854a6ed4efe2b862ca57bf063f6&`,
       `https://cdn.discordapp.com/attachments/1221441946615152680/1281564222488317962/20240903_104834.jpg?ex=682b0a30&is=6829b8b0&hm=09b0a5e2363e5fdab7ad40b83b16ab51f2848c552961751f5939edbee4a91bf9&`,
       `https://d.vxtwitter.com/blephin_/status/1748019919885832217?t=qzcI7cbwZEJ8uUUdmht9yA&s=19`,
       `https://cdn.discordapp.com/attachments/1221441946615152680/1281292405458604094/togif-1.gif?ex=682ab5ca&is=6829644a&hm=954795300df86533f743bdccee7cc433f2be6e876346e63d8814ddc37b2318f8&`,
@@ -238,6 +238,10 @@ client.on('messageCreate', async (message) => {
       `https://cdn.discordapp.com/attachments/1064378659579899925/1273250349049712731/copy_85B464E9-5340-42B2-8BCC-BF0044E4EE9A.gif?ex=682b1dcb&is=6829cc4b&hm=d6e7057e59727c9e15823dfeb2bcf557974eba99683596267752e2fca26e40d3&`,
       `sybau bro 🥀🥀🥀🥀`,
       `https://cdn.discordapp.com/attachments/1202269251621097576/1373609947673268224/attachment-7.gif?ex=682b0973&is=6829b7f3&hm=54930ad2074e3862c27ce7a88dbbcee7f40db88582ecfde101edc8d27697ff96&`,
+`https://cdn.discordapp.com/attachments/1351980844579033180/1373685945764675624/cachedVideo.mov?ex=682b503b&is=6829febb&hm=e2d07a2434830d8e2e1a1a55da5f5f8798691854a6ed4efe2b862ca57bf063f6&`,
+`https://cdn.discordapp.com/attachments/1351980844579033180/1373686778955038720/snapins-ai_3615571726075825390.mp4?ex=682b5101&is=6829ff81&hm=2cdaad98516cb1a76c665fce39f42467f2b56c0707aac886f484c2007570931c&`,
+`https://cdn.discordapp.com/attachments/1351980844579033180/1373686779445645442/nectarplasm_1747139048582.mov?ex=682b5102&is=6829ff82&hm=750037a46c4bb80fe4e734742d8f421958f78a75773befb3a1f593fcf548645f&`,
+`https://cdn.discordapp.com/attachments/1351980844579033180/1373686779839774851/B4Efp2SCMAAvEQH.jpg?ex=682b5102&is=6829ff82&hm=dc446216c6aa1f28b6f29e7d3bd0f37612a0583e19f9d1c0b1564e9285717d52&`,
     ];
     const roast = roasts[Math.floor(Math.random() * roasts.length)];
     message.channel.send(roast);
