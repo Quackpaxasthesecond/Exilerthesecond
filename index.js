@@ -366,11 +366,11 @@ client.on('messageCreate', async (message) => {
       `https://tenor.com/view/trash-can-floating-trash-can-garbage-rubbish-soap-gif-1326801645248012893`,
       `https://tenor.com/view/santa-santa-soap-santa-soap-gif-legend-4x-buffalo-wild-wings-soap-gif-4950479730416799474`,
       `https://tenor.com/view/barnes-and-noble-library-4x-legend-4x-legend-soap-soap-gif-2300793613653863013`,
-      `https://tenor.com/view/legend-4x-soap-legend-4-x-soap-red-robin-backshots-gif-9378008123558657750`
+      `https://tenor.com/view/legend-4x-soap-legend-4-x-soap-red-robin-backshots-gif-9378008123558657750`,
       `https://tenor.com/view/legend-4x-soap-hospital-gif-17717532597315888642`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374061372903788737/KILLALLPMFANS.gif?ex=682cade0&is=682b5c60&hm=6184cf4f1eca19e52f5c1db6a3547ee21f62a73b6c850c360100d4241f9f40b4&`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374061372580692008/IMG_4804.png?ex=682cade0&is=682b5c60&hm=2dceb97681881e76ce7439b003585fd9aad2e9e40f32c0352c9ccf0dbf32cf2e&`,
-      `${randomMember.user.username} is a balding chud 💔`
+      `${randomMember.user.username} is a balding chud 💔`,
       `https://tenor.com/view/king-engine-gif-14418252691903487661`,
       `https://tenor.com/view/5x30-workout-workoutmeme-meme-5x30meme-gif-7631146929495570394`,
       `https://tenor.com/view/12-f-police-fuck-gif-10445238489736079726`,
