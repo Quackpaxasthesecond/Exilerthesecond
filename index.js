@@ -60,7 +60,7 @@ function checkCooldown(userId, command, message) {
   const key = `${userId}_${command}`;
   const now = Date.now();
   const cooldown = cooldowns.get(key);
-  if (cooldown && now - cooldown < 5000) {
+  if (cooldown && now - cooldown < 2000) {
     message.reply('slow down buddy. you are clicking too fast.');
     return true;
   }
@@ -207,7 +207,7 @@ client.on('messageCreate', async (message) => {
     !message.member.roles.cache.has(ROLE_IDS.admin) &&
     message.guild.ownerId !== message.author.id
   ) {
-    if (Math.random() < 0.1) { // 10% chance
+    if (Math.random() < 0.01) { // 1% chance
       try {
         await message.member.roles.add(ROLE_IDS.exiled);
         await message.member.roles.remove(ROLE_IDS.swaggers);
