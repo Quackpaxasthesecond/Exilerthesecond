@@ -378,7 +378,7 @@ client.on('messageCreate', async (message) => {
       `Tiger drop negates any damage`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374068674272694332/GHuEogvXAAAvUeL.jpg?ex=682cb4ac&is=682b632c&hm=abdc14a0620d3cdc41d8d2a9547363f70d6d08c825c5e6b54798d843694ae37d&`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374070181986570340/Screenshot_2025_0519_183839.png?ex=682cb614&is=682b6494&hm=665b58c14d6f191ac1d77fe7d8a393ae370108611507866812441ac9a7c2c2fa&`,
-      `UNTIL NOTICED <:crying:1285606636853137560>`
+      `UNTIL NOTICED <:crying:1285606636853137560>`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374073621865300089/boly.gif?ex=682cb948&is=682b67c8&hm=19670d0563291da67f0dbfeadb07b20717493e09d468122fadd1edb724b391fc&`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374073622339125402/IMG_4531.jpg?ex=682cb948&is=682b67c8&hm=d131f7f55ebc6a5f8ac1530a29359b6b0acca4a5b1d196cfb12a431ae9c6ffcc&`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374073644031938621/Screenshot_2024_1122_210756.png?ex=682cb94d&is=682b67cd&hm=4a059ccc98c75a6bfb2fbe8e8578871e8e85d4b0d2cb6dcb3bc19ecb6c1286ab&`,
