@@ -1,3 +1,4 @@
+const timers = new Map();
 const { Client, GatewayIntentBits } = require('discord.js');
 const { Client: PgClient } = require('pg');
 require('dotenv').config();
@@ -92,35 +93,64 @@ client.on('messageCreate', async (message) => {
     return message.channel.send(helpMessage);
   }
 
-  if (command === '-exile') {
-    if (checkCooldown(message.author.id, command, message)) return;
-
-    if (
-      !message.member.roles.cache.has(ROLE_IDS.mod) &&
-      !message.member.roles.cache.has(ROLE_IDS.admin) &&
-      message.guild.ownerId !== message.author.id
-    ) return message.reply("you aint exiling anyone buddy bro.");
-
-    const target = message.mentions.members.first();
-    if (!target) return message.reply('Please mention a valid user to exile.');
-    if (target.user.bot) return; // Silently ignore bot exile attempt
-    if (target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.username} is already exiled!`);
-
-    try {
-      await target.roles.add(ROLE_IDS.exiled);
-      await target.roles.remove(ROLE_IDS.swaggers);
-      await target.roles.remove(ROLE_IDS.uncle);
-      message.channel.send(`${target.user.username} has been exiled.`);
-
-      await db.query(
-        `INSERT INTO exiles (issuer, target) VALUES ($1, $2)`,
-        [message.author.id, target.id]
-      );
-    } catch (err) {
-      console.error(err);
-      message.reply('An error occurred while trying to exile the user.');
-    }
+if (command === '-exile') {
+  if (
+    !message.member.roles.cache.has(ROLE_IDS.mod) &&
+    !message.member.roles.cache.has(ROLE_IDS.admin) &&
+    message.guild.ownerId !== message.author.id
+  ) {
+    return message.reply("you aint exiling anyone buddy bro. <:silence:1182339569874636841>");
   }
+
+  const target = message.mentions.members.first();
+  const durationArg = args[0] ? parseInt(args[0], 10) : null;
+
+  if (!target) {
+    return message.reply('Please mention a valid user to exile. Usage: `-exile @user [minutes]`');
+  }
+
+  // Check if already exiled
+  if (target.roles.cache.has(ROLE_IDS.exiled)) {
+    return message.reply(`${target.user.tag} is already exiled!`);
+  }
+
+  try {
+    await target.roles.add(ROLE_IDS.exiled);
+    await target.roles.remove(ROLE_IDS.swaggers);
+    await target.roles.remove(ROLE_IDS.uncle);
+
+    // Handle timer if duration provided
+    if (durationArg && !isNaN(durationArg) && durationArg > 0) {
+      message.channel.send(`${target.user.tag} has been exiled for ${durationArg} minutes.`);
+
+      // Clear old timer if it exists
+      if (timers.has(target.id)) clearTimeout(timers.get(target.id));
+
+      // Set timer
+      const timeout = setTimeout(async () => {
+        // Double check user still exiled
+        const refreshed = await message.guild.members.fetch(target.id).catch(() => null);
+        if (refreshed && refreshed.roles.cache.has(ROLE_IDS.exiled)) {
+          await refreshed.roles.remove(ROLE_IDS.exiled);
+          if (SPECIAL_MEMBERS.includes(refreshed.id)) {
+            await refreshed.roles.add(ROLE_IDS.uncle);
+            message.channel.send(`${refreshed.user.tag} the unc has been automatically unexiled after timer.`);
+          } else {
+            message.channel.send(`${refreshed.user.tag} has been automatically unexiled after timer.`);
+          }
+        }
+        timers.delete(target.id);
+      }, durationArg * 60 * 1000);
+
+      timers.set(target.id, timeout);
+    } else {
+      message.channel.send(`${target.user.tag} has been exiled.`);
+    }
+  } catch (error) {
+    console.error(error);
+    message.reply('An error occurred while trying to exile the user.');
+  }
+}
 
   if (command === '-unexile') {
     if (checkCooldown(message.author.id, command, message)) return;
