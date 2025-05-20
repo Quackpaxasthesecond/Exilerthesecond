@@ -60,7 +60,7 @@ function checkCooldown(userId, command, message) {
   const key = `${userId}_${command}`;
   const now = Date.now();
   const cooldown = cooldowns.get(key);
-  if (cooldown && now - cooldown < 5000) {
+  if (cooldown && now - cooldown < 2000) {
     message.reply('slow down buddy. you are clicking too fast.');
     return true;
   }
@@ -395,6 +395,8 @@ client.on('messageCreate', async (message) => {
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374074489947557908/does-this-sub-like-dumps-v0-csdxnyqee09d1.jpg?ex=682cba17&is=682b6897&hm=e305486ea4e82962a6e4bb48c951466e29985783536c519323e63358f36d7560&`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374076594787717160/WDvZgB4p.png?ex=682cbc0d&is=682b6a8d&hm=81fdd642532cea726c8fc1b5482f490c75ba76a3e75c754d7809eb43639d86f7&`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374076636454195342/Snapinsta.app_video_AQO0PXRhkK5Wjo1-u7Xd7qKJTtfJwLlnWr9PEtIspbmbBWxEfEX0EhKNwNLvYd3vZDxbzYCW4IrZsSNh57QaDkSSnGV8aI4Y0ZvTKw4.mp4?ex=682cbc17&is=682b6a97&hm=fa13a8874c90ab22a141a27added9013eae1853d3461788ecf4dcbcea8fc8451&`,
+`https://cdn.discordapp.com/attachments/1374052923956269136/1374087035161284628/IMG_3456.jpg?ex=682cc5c6&is=682b7446&hm=4416d44ef71aa19496f03b1d7019f50e6fe5336c35fb86517c1af969a87f0a5c&`,
+`https://cdn.discordapp.com/attachments/1374052923956269136/1374087049379840070/IMG_3483.jpg?ex=682cc5c9&is=682b7449&hm=16adcbe9c210bbea0ac2d7f33eb5ff3ab4b7c10cdffd40fd7e21f63580d62980&`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374087241638608906/ntdgm_gcm_gvcngc.mp4?ex=682d6eb7&is=682c1d37&hm=a905fb815d0eddf14893140f0574f10f4b6d51ad75ec19dcebd36d3710105f02&`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374094399662854245/IMG_3360.png?ex=682d7562&is=682c23e2&hm=554c7724cdad3c19b89eaa088018feab6c85fb1b6efe4c0fa499d1ffa3264feb&`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374094438728597646/IMG_3386.jpg?ex=682d756b&is=682c23eb&hm=2f940e901d9fa9e06c1913e616c95b45b843811ee2a4f4a0573072ea1eac1ef8&`,
