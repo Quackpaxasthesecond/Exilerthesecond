@@ -207,7 +207,7 @@ client.on('messageCreate', async (message) => {
     !message.member.roles.cache.has(ROLE_IDS.admin) &&
     message.guild.ownerId !== message.author.id
   ) {
-    if (Math.random() < 0.1) { // 10% chance
+    if (Math.random() < 0.01) { // 1% chance
       try {
         await message.member.roles.add(ROLE_IDS.exiled);
         await message.member.roles.remove(ROLE_IDS.swaggers);
@@ -217,10 +217,18 @@ client.on('messageCreate', async (message) => {
           `INSERT INTO exiles (issuer, target) VALUES ($1, $2)`,
           [message.author.id, message.author.id]
         );
+          setTimeout(async () => {
+          try {
+            await message.member.roles.remove(ROLE_IDS.exiled);
+            message.channel.send(`${message.author.username} has been automatically unexiled after 5 minutes.`);
+          } catch (err) {
+            console.error('Failed to auto-unexile:', err);
+          }
+        }, 5 * 60 * 1000);
         return; // stop here, so no roast is sent
       } catch (err) {
         console.error(err);
-        message.reply('you lucky as fuck for not getting exiled at 10% chance');
+        message.reply('you lucky as fuck for not getting exiled at 1% chance');
         return;
       }
     }
@@ -378,7 +386,6 @@ client.on('messageCreate', async (message) => {
       `Tiger drop negates any damage`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374068674272694332/GHuEogvXAAAvUeL.jpg?ex=682cb4ac&is=682b632c&hm=abdc14a0620d3cdc41d8d2a9547363f70d6d08c825c5e6b54798d843694ae37d&`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374070181986570340/Screenshot_2025_0519_183839.png?ex=682cb614&is=682b6494&hm=665b58c14d6f191ac1d77fe7d8a393ae370108611507866812441ac9a7c2c2fa&`,
-      `UNTIL NOTICED <:crying:1285606636853137560>`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374073621865300089/boly.gif?ex=682cb948&is=682b67c8&hm=19670d0563291da67f0dbfeadb07b20717493e09d468122fadd1edb724b391fc&`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374073622339125402/IMG_4531.jpg?ex=682cb948&is=682b67c8&hm=d131f7f55ebc6a5f8ac1530a29359b6b0acca4a5b1d196cfb12a431ae9c6ffcc&`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374073644031938621/Screenshot_2024_1122_210756.png?ex=682cb94d&is=682b67cd&hm=4a059ccc98c75a6bfb2fbe8e8578871e8e85d4b0d2cb6dcb3bc19ecb6c1286ab&`,
@@ -388,6 +395,50 @@ client.on('messageCreate', async (message) => {
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374074489947557908/does-this-sub-like-dumps-v0-csdxnyqee09d1.jpg?ex=682cba17&is=682b6897&hm=e305486ea4e82962a6e4bb48c951466e29985783536c519323e63358f36d7560&`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374076594787717160/WDvZgB4p.png?ex=682cbc0d&is=682b6a8d&hm=81fdd642532cea726c8fc1b5482f490c75ba76a3e75c754d7809eb43639d86f7&`,
       `https://cdn.discordapp.com/attachments/1374052923956269136/1374076636454195342/Snapinsta.app_video_AQO0PXRhkK5Wjo1-u7Xd7qKJTtfJwLlnWr9PEtIspbmbBWxEfEX0EhKNwNLvYd3vZDxbzYCW4IrZsSNh57QaDkSSnGV8aI4Y0ZvTKw4.mp4?ex=682cbc17&is=682b6a97&hm=fa13a8874c90ab22a141a27added9013eae1853d3461788ecf4dcbcea8fc8451&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374087241638608906/ntdgm_gcm_gvcngc.mp4?ex=682d6eb7&is=682c1d37&hm=a905fb815d0eddf14893140f0574f10f4b6d51ad75ec19dcebd36d3710105f02&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374094399662854245/IMG_3360.png?ex=682d7562&is=682c23e2&hm=554c7724cdad3c19b89eaa088018feab6c85fb1b6efe4c0fa499d1ffa3264feb&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374094438728597646/IMG_3386.jpg?ex=682d756b&is=682c23eb&hm=2f940e901d9fa9e06c1913e616c95b45b843811ee2a4f4a0573072ea1eac1ef8&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374094509532512256/Screenshot_20250512-204837.jpg?ex=682d757c&is=682c23fc&hm=de4042d4882c97753412fd98aac1c5714518a0dc92de7f140f764ef3cceef77c&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374094523197690028/IMG_3108.jpg?ex=682d757f&is=682c23ff&hm=5bd1f4e0686e5655e505c83870551d2f81632e56af23b4c63ec9c8ed1aa4d88d&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374094571960533022/Screenshot_20250510-005253.jpg?ex=682d758b&is=682c240b&hm=a0e6c90d825706a9734c7095edba09bf6499872e4371e0565de85f4f71df4bb8&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374094608727805972/7503209184310218006.bin.mp4?ex=682d7594&is=682c2414&hm=847d78cfeec329f035a1b2408d0e7b94b098592066a64a88ec14a986552bea24&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374139634187112468/image-126.png.jpg?ex=682cf6c3&is=682ba543&hm=b5062262cfe8a5647d5bf5c8c6beffab5f2a96b0a8cf83d7cb951ba04c6f21f7&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374139670992125962/image-144.png?ex=682cf6cb&is=682ba54b&hm=881cda6fd37ace003c545e60a0083e9fdc81343eaf68b3a3701b18241c3215b0&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374141067116548237/Screenshot_2025-05-13-21-23-26-10_1c337646f29875672b5a61192b9010f9.jpg?ex=682cf818&is=682ba698&hm=1d9896ce5baff779c07869d652afbb2f38c982e89678236ac73a0f86bdc3fdbb&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374199873175552020/c945905e39fd8023ca7398a4740aa8f6.jpg?ex=682d2edd&is=682bdd5d&hm=dbcf3e2d5058042528173d921f769a6a8a30f7c936a61aa4ab3a27a79542ed4f&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374200190457876500/runaway-fnf.gif?ex=682d2f28&is=682bdda8&hm=6e66e3ceee7adeed08335eb0d5a10a52b9b481bd0ab5af099afd3ced2ba0cba4&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374219134346461184/Gq4MR4ObAAA8xmA.jpg?ex=682d40cd&is=682bef4d&hm=3a1efc5fcab52971ecac0ba78783677bad9495b201cad4d0e7655c8287d1d8ac&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374220998400016458/No_fighting.mp4?ex=682d4289&is=682bf109&hm=a6a2a89c31b1c63b69d4abbf3e29018ffa34fa88f68f6b618cd0a3813283a12f&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374221078506766407/twitter.mp4?ex=682d429c&is=682bf11c&hm=d9d38f2a389dd310bceed54070e390952933fb61eb5007f4b8de8e59859808a4&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374235605734653952/20250508_123508.jpg?ex=682d5024&is=682bfea4&hm=ae0cc02b4c13723f85d9f574a3f82cca575145fb9e94d00263d61a5a7dea52a7&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374235639989538907/cachedVideo.mov?ex=682d502c&is=682bfeac&hm=78ddedd6c81f04daf7eb70b37a954309dfc5d8e69132cf613325a13f699bcea0&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374235726144606268/IMG_4141.png?ex=682d5041&is=682bfec1&hm=8da2413e6ee731b4ad6e7e3f0bd51faa78733aaa47ccaa8b97d5fcf8a588f3ec&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374235783506034758/Trunks_.mov?ex=682d504e&is=682bfece&hm=e5f9e3761e8f6e3176a9a62c2912d5b7e84bc075b90259a86cb9b8f8bc70f0bb&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374235800463478804/cachedVideo.mov?ex=682d5052&is=682bfed2&hm=b2c2218202b99cf4540b942895d5b999b207bd757623b9c8f8d056a1247b2bab&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374236008421261404/20250421_104336.jpg?ex=682d5084&is=682bff04&hm=10f65ef38539f8cd5d086510394fb835a99dac7f0a4d7973ba75b824efb1686f&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374236028747120810/IMG_4118.png?ex=682d5089&is=682bff09&hm=62c4c607308b3a7b2a66a9dc584ccdf7c05e66f36caa2d0a793baf1af6cb83e5&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374236075874320485/IMG_3997.png?ex=682d5094&is=682bff14&hm=16dfb2b8d5185b815aea36028aadbb1a3c69bb6ba5ac20897a67706537a9a70d&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374236168581025983/cachedVideo.mov?ex=682d50aa&is=682bff2a&hm=6e309fa509cc95c393dec3371a1c2a322b65d0b51d871d8e7b2a9c7edea9acbf&`,
+      `https://tenor.com/view/glitch-class-funny-glitching-gif-1278280886870965156`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374251549584527360/20250505_090648.jpg?ex=682d5efd&is=682c0d7d&hm=086e7e102db47b4716ec64919a803bfe01e70f9fd17e5fc7034258e2f66de964&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374251575656189982/R5DotYfXjMfMd59j.bin.mp4?ex=682d5f03&is=682c0d83&hm=1d6da7471e4688f96f8f1fcf52e02538d73e643a2112bb646c6803829798f7ba&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374251758913585234/011554bc95589fde3301c3f2ba061e4d.png?ex=682d5f2f&is=682c0daf&hm=3a9d4f2b4e21b32dd03fcf1b40302187d9fa491d58568fd22879aa1875c3b63c&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374252859474051153/IMG_3845.png?ex=682d6036&is=682c0eb6&hm=e26a82ef3348d16c145af7427993ccba193348bbb8a1c39576ca12a6b45758dd&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374260116408504440/image0-2.jpg?ex=682d66f8&is=682c1578&hm=470b9e60b74588d1d3272b2315263b9947dc1d9275e0e4dd8126dd61443103a5&`,
+      `https://tenor.com/view/gunna-gunna-irony-fail-gif-3072952405512598422`,
+      `https://tenor.com/view/lapiscel-horse-funny-quiz-gif-15349069977875529804`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374300367545958410/STW_amr.mov?ex=682d8c74&is=682c3af4&hm=a1fbedffa3997df5cf0bafd2e06187cd59e3bd81fa947ed3ad9db298229bd6d6&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374300424764526602/755.png?ex=682d8c82&is=682c3b02&hm=6d4e1765e763726828f578aedbbba238749d9453699e426d88a55e004fe09f3b&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374300533258457088/Screenshot_2025-01-25-21-15-59-22_f9ee0578fe1cc94de7482bd41accb329.jpg?ex=682d8c9c&is=682c3b1c&hm=a41df7745de50677cc5df6dbf2eca1cbee03f2176542a0f88c615ccf1ec05598&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374301253236031571/RDT_20240729_185201724152992456539125.jpg?ex=682d8d48&is=682c3bc8&hm=400cb03e42c3453bdd8a5c1ae73eea749c855518aefde6ed22d296eec5c92240&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374301866912907284/IMG_3212.jpg?ex=682d8dda&is=682c3c5a&hm=76489c0deb717010ee9eff42865de28785b793effa3ccc96e8f22cee621faac0&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374303556848455712/N_Vanknightling_by_MWINS-1.gif?ex=682d8f6d&is=682c3ded&hm=814b80640ee9affa693e3b6a4d32f9b3f0218dde98b69b3776631163c2991cfe&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374303641372196936/IMG_3322.jpg?ex=682d8f81&is=682c3e01&hm=405149e66d9af713e8b5308bd744c681412ba2c955246acebad7932c5c871711&`,
+      `https://tenor.com/view/freeeezeee-gif-5460290174988832181`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374303719470006342/image-330.png?ex=682d8f94&is=682c3e14&hm=248bb21788fbf4a9eedeb106591fbdf0a0886deb1e68d996fd86f42e955c8551&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374303757688373349/IMG_20250405_135305_500.jpg?ex=682d8f9d&is=682c3e1d&hm=df154b8c5b2b99ced0aaf96c6f5ec74a413f1cab5b7e80af974932690c51d342&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374303825183117403/Untitled247_20250426190407.png?ex=682d8fad&is=682c3e2d&hm=eae9ce1b93e7cc2206fd6fef17edbeb35084af9a47ddef8395ad334e9d624092&`,
+      `https://cdn.discordapp.com/attachments/1374052923956269136/1374304096890261556/image0.jpg?ex=682d8fee&is=682c3e6e&hm=e8536906d5e136f4c8cb9aebacd630d00e89d78f08735f593fb1d0605965d620&`,
     ];
     const roast = roasts[Math.floor(Math.random() * roasts.length)];
     message.channel.send(roast);
