@@ -1,15 +1,17 @@
 const timers = new Map();
-const preExileRoles = new Map();
 const { Client, GatewayIntentBits } = require('discord.js');
 const { Client: PgClient } = require('pg');
 require('dotenv').config();
 const http = require('http');
 
+// HTTP server for uptime monitoring
 const server = http.createServer((req, res) => {
   res.writeHead(200);
   res.end('Bot is running!');
 });
-server.listen(3000, '0.0.0.0');
+server.listen(3000, '0.0.0.0', () => {
+  console.log('HTTP server ready on port 3000');
+});
 
 const client = new Client({
   intents: [
@@ -20,17 +22,23 @@ const client = new Client({
   ],
 });
 
-const db = new PgClient({ connectionString: process.env.POSTGRES_URL });
-db.connect().then(() => console.log('Connected to PostgreSQL database.'))
+// PostgreSQL DB
+const db = new PgClient({
+  connectionString: process.env.POSTGRES_URL,
+});
+db.connect()
+  .then(() => console.log('Connected to PostgreSQL database.'))
   .catch(err => console.error('Postgres connection error:', err));
 
-db.query(`CREATE TABLE IF NOT EXISTS exiles (
-  id SERIAL PRIMARY KEY,
-  issuer TEXT NOT NULL,
-  target TEXT NOT NULL,
-  method TEXT DEFAULT 'manual',
-  timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);`).catch(console.error);
+// Create table if not exists (run at startup)
+db.query(`
+  CREATE TABLE IF NOT EXISTS exiles (
+    id SERIAL PRIMARY KEY,
+    issuer TEXT NOT NULL,
+    target TEXT NOT NULL,
+    timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+  );
+`).catch(err => console.error(err));
 
 const ROLE_IDS = {
   exiled: '1208808796890337350',
@@ -40,15 +48,14 @@ const ROLE_IDS = {
   admin: '1351985637602885734',
 };
 
-const SPECIAL_MEMBERS = [
+const SPECIAL_MEMBERS = [ // Uncle refugeers
   '1346764665593659393', '1234493339638825054', '1149822228620382248',
   '1123873768507457536', '696258636602802226', '512964486148390922',
   '1010180074990993429', '464567511615143962', '977923308387455066',
   '800291423933038612', '872408669151690755', '1197176029815517257',
 ];
 
-const SWAGGERS_MEMBERS = [
-  '696258636602802226', '699154992891953215', '1025984312727842846', '800291423933038612',
+const SWAGGER_MEMBERS = [ // Add your swagger member   '696258636602802226', '699154992891953215', '1025984312727842846', '800291423933038612',
 ];
 
 const cooldowns = new Map();
@@ -90,58 +97,67 @@ client.on('messageCreate', async (message) => {
   }
 
   if (command === '-exile') {
-    if (!message.member.roles.cache.has(ROLE_IDS.mod) &&
-        !message.member.roles.cache.has(ROLE_IDS.admin) &&
-        message.guild.ownerId !== message.author.id) {
-      return message.reply("you aint exiling anyone buddy bro.");
+    if (
+      !message.member.roles.cache.has(ROLE_IDS.mod) &&
+      !message.member.roles.cache.has(ROLE_IDS.admin) &&
+      message.guild.ownerId !== message.author.id
+    ) {
+      return message.reply("you aint exiling anyone buddy bro. <:silence:1182339569874636841>");
     }
 
     const target = message.mentions.members.first();
-    const duration = args[1] ? parseInt(args[1], 10) : null;
-    if (!target) return message.reply('Mention someone to exile.');
-    if (target.user.bot) return;
-    if (target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.username} is already exiled!`);
+    const durationArg = args[1] ? parseInt(args[1], 10) : null;
+
+    if (!target) {
+      return message.reply('Please mention a valid user to exile. Usage: `-exile @user [minutes]`');
+    }
+
+    if (target.roles.cache.has(ROLE_IDS.exiled)) {
+      return message.reply(`${target.user.tag} is already exiled!`);
+    }
 
     try {
-      preExileRoles.set(target.id, {
-        uncle: SPECIAL_MEMBERS.includes(target.id) && target.roles.cache.has(ROLE_IDS.uncle),
-        swaggers: SWAGGERS_MEMBERS.includes(target.id) && target.roles.cache.has(ROLE_IDS.swaggers),
-      });
-
       await target.roles.add(ROLE_IDS.exiled);
       await target.roles.remove(ROLE_IDS.swaggers);
       await target.roles.remove(ROLE_IDS.uncle);
 
+      // Log all exiles immediately
       await db.query(
-        `INSERT INTO exiles (issuer, target, method) VALUES ($1, $2, $3)`,
-        [message.author.id, target.id, 'manual']
+        `INSERT INTO exiles (issuer, target) VALUES ($1, $2)`,
+        [message.author.id, target.id]
       );
 
-      if (duration && !isNaN(duration)) {
-        message.channel.send(`${target.user.username} has been exiled for ${duration} minutes.`);
+      if (durationArg && !isNaN(durationArg) && durationArg > 0) {
+        message.channel.send(`${target.user.username} has been exiled for ${durationArg} minutes.`);
+        
         if (timers.has(target.id)) clearTimeout(timers.get(target.id));
-
+        
         const timeout = setTimeout(async () => {
           const refreshed = await message.guild.members.fetch(target.id).catch(() => null);
-          if (refreshed?.roles.cache.has(ROLE_IDS.exiled)) {
+          if (refreshed && refreshed.roles.cache.has(ROLE_IDS.exiled)) {
             await refreshed.roles.remove(ROLE_IDS.exiled);
-            const roles = preExileRoles.get(target.id);
-            if (roles?.uncle) await refreshed.roles.add(ROLE_IDS.uncle);
-            if (roles?.swaggers) await refreshed.roles.add(ROLE_IDS.swaggers);
-            preExileRoles.delete(target.id);
-            message.channel.send(`${refreshed.user.username} has been automatically unexiled.`);
-            await db.query(`INSERT INTO exiles (issuer, target, method) VALUES ($1, $2, 'auto')`, ['auto', refreshed.id]);
+            
+            // Restore appropriate role
+            if (SPECIAL_MEMBERS.includes(refreshed.id)) {
+              await refreshed.roles.add(ROLE_IDS.uncle);
+              message.channel.send(`${refreshed.user.username} the unc has been automatically unexiled.`);
+            } else if (SWAGGER_MEMBERS.includes(refreshed.id)) {
+              await refreshed.roles.add(ROLE_IDS.swaggers);
+              message.channel.send(`${refreshed.user.username} the swagger has been automatically unexiled.`);
+            } else {
+              message.channel.send(`${refreshed.user.username} has been automatically unexiled.`);
+            }
           }
           timers.delete(target.id);
-        }, duration * 60000);
-
+        }, durationArg * 60 * 1000);
+        
         timers.set(target.id, timeout);
       } else {
         message.channel.send(`${target.user.username} has been exiled.`);
       }
-    } catch (err) {
-      console.error(err);
-      message.reply('Exile failed.');
+    } catch (error) {
+      console.error(error);
+      message.reply('An error occurred while trying to exile the user.');
     }
   }
 
@@ -160,9 +176,14 @@ client.on('messageCreate', async (message) => {
 
     try {
       await target.roles.remove(ROLE_IDS.exiled);
+      
+      // Restore appropriate role
       if (SPECIAL_MEMBERS.includes(target.id)) {
         await target.roles.add(ROLE_IDS.uncle);
         message.channel.send(`${target.user.username} the unc has been unexiled`);
+      } else if (SWAGGER_MEMBERS.includes(target.id)) {
+        await target.roles.add(ROLE_IDS.swaggers);
+        message.channel.send(`${target.user.username} the swagger has been unexiled`);
       } else {
         message.channel.send(`${target.user.username} has been unexiled.`);
       }
@@ -170,7 +191,9 @@ client.on('messageCreate', async (message) => {
       console.error(err);
       message.reply('An error occurred while trying to unexile the user.');
     }
-  }
+  if (true) {
+    
+  }}
 
   if (command === '-myexiles') {
     if (checkCooldown(message.author.id, command, message)) return;
@@ -222,41 +245,57 @@ client.on('messageCreate', async (message) => {
     }
   }
 
-  if (command === '-hi') {
-    if (checkCooldown(message.author.id, command, message)) return;
+if (command === '-hi') {
+  if (checkCooldown(message.author.id, command, message)) return;
 
-    if (
-      !message.member.roles.cache.has(ROLE_IDS.mod) &&
-      !message.member.roles.cache.has(ROLE_IDS.admin) &&
-      message.guild.ownerId !== message.author.id
-    ) {
-      if (Math.random() < 0.01) { // 1% chance
-        try {
-          await message.member.roles.add(ROLE_IDS.exiled);
-          await message.member.roles.remove(ROLE_IDS.swaggers);
-          await message.member.roles.remove(ROLE_IDS.uncle);
-          message.channel.send(`${message.author.username} just got exiled for using -hi 😭`);
-          await db.query(
-            `INSERT INTO exiles (issuer, target, method) VALUES ($1, $2, $3)`,
-             [message.author.id, message.author.id, 'hi']
-          );
+  if (
+    !message.member.roles.cache.has(ROLE_IDS.mod) &&
+    !message.member.roles.cache.has(ROLE_IDS.admin) &&
+    message.guild.ownerId !== message.author.id
+  ) {
+    if (Math.random() < 0.01) {
+      try {
+        // Store original roles before exile
+        const wasSwagger = message.member.roles.cache.has(ROLE_IDS.swaggers);
+        const wasUncle = message.member.roles.cache.has(ROLE_IDS.uncle);
 
-          setTimeout(async () => {
-            try {
-              await message.member.roles.remove(ROLE_IDS.exiled);
-              message.channel.send(`${message.author.username} has been automatically unexiled after 5 minutes.`);
-            } catch (err) {
-              console.error('Failed to auto-unexile:', err);
+        await message.member.roles.add(ROLE_IDS.exiled);
+        await message.member.roles.remove(ROLE_IDS.swaggers);
+        await message.member.roles.remove(ROLE_IDS.uncle);
+        
+        // Log the exile with self-as-issuer
+        await db.query(
+          `INSERT INTO exiles (issuer, target) VALUES ($1, $2)`,
+          [message.author.id, message.author.id]
+        );
+        
+        message.channel.send(`${message.author.username} just got exiled for using -hi 😭`);
+
+        setTimeout(async () => {
+          try {
+            await message.member.roles.remove(ROLE_IDS.exiled);
+            
+            // Restore original role if applicable
+            if (wasUncle || SPECIAL_MEMBERS.includes(message.author.id)) {
+              await message.member.roles.add(ROLE_IDS.uncle);
             }
-          }, 5 * 60 * 1000);
-          return; // stop here, so no roast is sent
-        } catch (err) {
-          console.error(err);
-          message.reply('you lucky as fuck for not getting exiled at 1% chance');
-          return;
-        }
+            if (wasSwagger || SWAGGER_MEMBERS.includes(message.author.id)) {
+              await message.member.roles.add(ROLE_IDS.swaggers);
+            }
+            
+            message.channel.send(`${message.author.username} has been automatically unexiled after 5 minutes.`);
+          } catch (err) {
+            console.error('Failed to auto-unexile:', err);
+          }
+        }, 5 * 60 * 1000);
+        return;
+      } catch (err) {
+        console.error(err);
+        message.reply('you lucky as fuck for not getting exiled at 1% chance');
+        return;
       }
     }
+  }
 
     const members = await message.guild.members.fetch();
     const filtered = members.filter(m => !m.user.bot && m.id !== message.author.id);
