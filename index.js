@@ -55,7 +55,11 @@ const SPECIAL_MEMBERS = [ // Uncle refugeers
   '800291423933038612', '872408669151690755', '1197176029815517257',
 ];
 
-const SWAGGER_MEMBERS = [ // Add your swagger member   '696258636602802226', '699154992891953215', '1025984312727842846', '800291423933038612',
+const SWAGGER_MEMBERS = [ 
+ '696258636602802226',
+ '699154992891953215',
+ '1025984312727842846',
+ '800291423933038612',
 ];
 
 const cooldowns = new Map();
@@ -183,7 +187,7 @@ client.on('messageCreate', async (message) => {
         message.channel.send(`${target.user.username} the unc has been unexiled`);
       } else if (SWAGGER_MEMBERS.includes(target.id)) {
         await target.roles.add(ROLE_IDS.swaggers);
-        message.channel.send(`${target.user.username} the swagger has been unexiled`);
+        message.channel.send(`${target.user.username} has been unexiled. with your little swag too ig`);
       } else {
         message.channel.send(`${target.user.username} has been unexiled.`);
       }
