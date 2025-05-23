@@ -67,35 +67,20 @@ const SWAGGER_MEMBERS = [
 
 const cooldowns = new Map();
 
-function checkCooldown(userId, command, message) {
-  const key = `${userId}_${command}`;
-  const now = Date.now();
-  const cooldown = cooldowns.get(key);
-  if (cooldown && now - cooldown < 2000) {
-    message.reply('slow down buddy. you are clicking too fast.');
-    return true;
-  }
-  cooldowns.set(key, now);
-  return false;
-}
-async function confirmWithReactions(message, promptText) {
-  const confirmMsg = await message.channel.send(promptText);
-  await confirmMsg.react('✅');
-  await confirmMsg.react('❌');
-
-  const filter = (reaction, user) =>
-    ['✅', '❌'].includes(reaction.emoji.name) && user.id === message.author.id;
+async function confirmAction(message, promptText) {
+  const filter = m => m.author.id === message.author.id;
+  await message.channel.send(promptText);
 
   try {
-    const collected = await confirmMsg.awaitReactions({
+    const collected = await message.channel.awaitMessages({
       filter,
       max: 1,
       time: 15000,
       errors: ['time']
     });
 
-    const reaction = collected.first();
-    return reaction.emoji.name === '✅';
+    const response = collected.first().content.toLowerCase();
+    return response === 'yes' || response === 'confirm';
   } catch {
     return false;
   }
@@ -389,7 +374,7 @@ if (command === '-removeexile') {
     return message.reply("Usage: `-removeexile @user <positive number>`");
   }
 
-  const confirmed = await confirmWithReactions(message, `Remove up to ${amount} exile${amount > 1 ? 's' : ''} from ${target.user.username}? React with ✅ to confirm or ❌ to cancel.`);
+  const confirmed = await confirmAction(message, `Type \`yes\` to remove up to ${amount} exiles for ${target.user.username}.`);
   if (!confirmed) return message.channel.send('Action cancelled.');
 
   try {
@@ -415,7 +400,7 @@ if (command === '-resetleaderboard') {
     return message.reply('Please mention a valid user to reset their leaderboard score.');
   }
 
-  const confirmed = await confirmWithReactions(message, `Are you sure you want to completely reset ${target.user.username}'s exile record? React with ✅ to confirm or ❌ to cancel.`);
+  const confirmed = await confirmAction(message, `Type \`yes\` to reset all exiles for ${target.user.username}.`);
   if (!confirmed) return message.channel.send('Action cancelled.');
 
   try {
