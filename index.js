@@ -305,10 +305,14 @@ if (command === '-hi') {
     const members = await message.guild.members.fetch();
     const filtered = members.filter(m => !m.user.bot && m.id !== message.author.id);
     if (filtered.size === 0) return message.reply("you will die....");
-
+    
     const randomMember = filtered.random();
     const roast = roasts[Math.floor(Math.random() * roasts.length)];
-    message.channel.send(roast);
+    if (roast.startsWith('http')) {
+      message.channel.send(roast); // send image/gif
+    } else {
+    message.channel.send(`${randomMember.user.username} ${roast}`); // send roast line
+    }
 
   }
 });
