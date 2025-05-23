@@ -54,6 +54,7 @@ const SPECIAL_MEMBERS = [ // Uncle refugeers
   '1123873768507457536', '696258636602802226', '512964486148390922',
   '1010180074990993429', '464567511615143962', '977923308387455066',
   '800291423933038612', '872408669151690755', '1197176029815517257',
+  '832354579890569226',
 ];
 
 const SWAGGER_MEMBERS = [ 
@@ -61,6 +62,7 @@ const SWAGGER_MEMBERS = [
  '699154992891953215',
  '1025984312727842846',
  '800291423933038612',
+ '832354579890569226',
 ];
 
 const cooldowns = new Map();
@@ -101,7 +103,7 @@ client.on('messageCreate', async (message) => {
     return message.channel.send(helpMessage);
   }
 
-  if (command === '-exile') {
+ if (command === '-exile') {
     if (
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
@@ -166,39 +168,44 @@ client.on('messageCreate', async (message) => {
     }
   }
 
-  if (command === '-unexile') {
-    if (checkCooldown(message.author.id, command, message)) return;
+if (command === '-unexile') {
+  if (checkCooldown(message.author.id, command, message)) return;
 
-    if (
-      !message.member.roles.cache.has(ROLE_IDS.mod) &&
-      !message.member.roles.cache.has(ROLE_IDS.admin) &&
-      message.guild.ownerId !== message.author.id
-    ) return message.reply("nice try buddy");
+  if (
+    !message.member.roles.cache.has(ROLE_IDS.mod) &&
+    !message.member.roles.cache.has(ROLE_IDS.admin) &&
+    message.guild.ownerId !== message.author.id
+  ) return message.reply("nice try buddy");
 
-    const target = message.mentions.members.first();
-    if (!target) return message.reply('Please mention a valid user to unexile.');
-    if (!target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.username} is not exiled!`);
+  const target = message.mentions.members.first();
+  if (!target) return message.reply('Please mention a valid user to unexile.');
+  if (!target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.username} is not exiled!`);
 
-    try {
-      await target.roles.remove(ROLE_IDS.exiled);
-      
-      // Restore appropriate role
-      if (SPECIAL_MEMBERS.includes(target.id)) {
-        await target.roles.add(ROLE_IDS.uncle);
-        message.channel.send(`${target.user.username} the unc has been unexiled`);
-      } else if (SWAGGER_MEMBERS.includes(target.id)) {
-        await target.roles.add(ROLE_IDS.swaggers);
-        message.channel.send(`${target.user.username} has been unexiled. with your little swag too ig`);
-      } else {
-        message.channel.send(`${target.user.username} has been unexiled.`);
-      }
-    } catch (err) {
-      console.error(err);
-      message.reply('An error occurred while trying to unexile the user.');
+  try {
+    await target.roles.remove(ROLE_IDS.exiled);
+
+    // Restore roles based on membership
+    const isUncle = SPECIAL_MEMBERS.includes(target.id);
+    const isSwagger = SWAGGER_MEMBERS.includes(target.id);
+
+    if (isUncle && isSwagger) {
+      await target.roles.add([ROLE_IDS.uncle, ROLE_IDS.swaggers]);
+      message.channel.send(`${target.user.username} has been unexiled and regained the power of both unc and swag 😤`);
+    } else if (isUncle) {
+      await target.roles.add(ROLE_IDS.uncle);
+      message.channel.send(`${target.user.username} the unc has been unexiled`);
+    } else if (isSwagger) {
+      await target.roles.add(ROLE_IDS.swaggers);
+      message.channel.send(`${target.user.username} has been unexiled. with your little swag too ig`);
+    } else {
+      message.channel.send(`${target.user.username} has been unexiled.`);
     }
-  if (true) {
-    
-  }}
+
+  } catch (err) {
+    console.error(err);
+    message.reply('An error occurred while trying to unexile the user.');
+  }
+}
 
   if (command === '-myexiles') {
     if (checkCooldown(message.author.id, command, message)) return;
