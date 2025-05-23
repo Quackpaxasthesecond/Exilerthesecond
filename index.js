@@ -253,6 +253,7 @@ client.on('messageCreate', async (message) => {
 if (command === '-hi') {
   if (checkCooldown(message.author.id, command, message)) return;
 
+  // 1% chance to exile regular user
   if (
     !message.member.roles.cache.has(ROLE_IDS.mod) &&
     !message.member.roles.cache.has(ROLE_IDS.admin) &&
@@ -260,34 +261,31 @@ if (command === '-hi') {
   ) {
     if (Math.random() < 0.01) {
       try {
-        // Store original roles before exile
         const wasSwagger = message.member.roles.cache.has(ROLE_IDS.swaggers);
         const wasUncle = message.member.roles.cache.has(ROLE_IDS.uncle);
 
         await message.member.roles.add(ROLE_IDS.exiled);
         await message.member.roles.remove(ROLE_IDS.swaggers);
         await message.member.roles.remove(ROLE_IDS.uncle);
-        
-        // Log the exile with self-as-issuer
+
         await db.query(
           `INSERT INTO exiles (issuer, target) VALUES ($1, $2)`,
           [message.author.id, message.author.id]
         );
-        
+
         message.channel.send(`${message.author.username} just got exiled for using -hi 😭`);
 
         setTimeout(async () => {
           try {
             await message.member.roles.remove(ROLE_IDS.exiled);
-            
-            // Restore original role if applicable
+
             if (wasUncle || SPECIAL_MEMBERS.includes(message.author.id)) {
               await message.member.roles.add(ROLE_IDS.uncle);
             }
             if (wasSwagger || SWAGGER_MEMBERS.includes(message.author.id)) {
               await message.member.roles.add(ROLE_IDS.swaggers);
             }
-            
+
             message.channel.send(`${message.author.username} has been automatically unexiled after 5 minutes.`);
           } catch (err) {
             console.error('Failed to auto-unexile:', err);
@@ -296,25 +294,26 @@ if (command === '-hi') {
         return;
       } catch (err) {
         console.error(err);
-        message.reply('you lucky as fuck for not getting exiled at 1% chance');
+        message.reply('you lucky as hell for dodging that 1% exile chance');
         return;
       }
     }
   }
 
-    const members = await message.guild.members.fetch();
-    const filtered = members.filter(m => !m.user.bot && m.id !== message.author.id);
-    if (filtered.size === 0) return message.reply("you will die....");
-    
-    const randomMember = filtered.random();
-    const roast = roasts[Math.floor(Math.random() * roasts.length)];
-    if (roast.startsWith('http')) {
-      message.channel.send(roast); // send image/gif
-    } else {
-    message.channel.send(`${randomMember.user.username} ${roast}`); // send roast line
-    }
+  // Roast someone randomly
+  const members = await message.guild.members.fetch();
+  const filtered = members.filter(m => !m.user.bot && m.id !== message.author.id);
+  if (filtered.size === 0) return message.reply("you will die....");
 
+  const randomMember = filtered.random();
+  const roast = roasts[Math.floor(Math.random() * roasts.length)];
+
+  if (roast.startsWith('http')) {
+    message.channel.send(roast); // Media link
+  } else {
+    message.channel.send(`${randomMember.user.username} ${roast}`); // Text roast
   }
+}
 });
 
 client.login(process.env.DISCORD_BOT_TOKEN).catch(err => {
