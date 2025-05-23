@@ -84,6 +84,29 @@ client.once('ready', () => {
   client.user.setActivity('Exiling buddies.');
 });
 
+async function confirmWithReactions(message, promptText) {
+  const confirmMsg = await message.channel.send(promptText);
+  await confirmMsg.react('✅');
+  await confirmMsg.react('❌');
+
+  const filter = (reaction, user) =>
+    ['✅', '❌'].includes(reaction.emoji.name) && user.id === message.author.id;
+
+  try {
+    const collected = await confirmMsg.awaitReactions({
+      filter,
+      max: 1,
+      time: 15000,
+      errors: ['time']
+    });
+
+    const reaction = collected.first();
+    return reaction.emoji.name === '✅';
+  } catch {
+    return false;
+  }
+}
+
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
@@ -321,6 +344,87 @@ if (command === '-hi') {
     message.channel.send(roast.replace('{user}', randomMember.user.username)); // Replace {user}
   } else {
     message.channel.send(`${randomMember.user.username} ${roast}`); // Append name by default
+  }
+}
+
+// Add exile entries manually
+if (command === '-addexile') {
+  if (message.guild.ownerId !== message.author.id) {
+    return message.reply("Only the server owner can modify leaderboard records.");
+  }
+
+  const target = message.mentions.members.first();
+  const amount = parseInt(args[1], 10);
+
+  if (!target || isNaN(amount) || amount <= 0) {
+    return message.reply("Usage: `-addexile @user <positive number>`");
+  }
+
+  try {
+    const values = [];
+    for (let i = 0; i < amount; i++) {
+      values.push(`('${message.author.id}', '${target.id}')`);
+    }
+
+    await db.query(
+      `INSERT INTO exiles (issuer, target) VALUES ${values.join(',')}`
+    );
+
+    message.channel.send(`Added ${amount} exile${amount > 1 ? 's' : ''} for ${target.user.username}.`);
+  } catch (err) {
+    console.error(err);
+    message.reply('Error adding fake exile entries.');
+  }
+}
+
+// Remove exile entries
+if (command === '-removeexile') {
+  if (message.guild.ownerId !== message.author.id) {
+    return message.reply("Only the server owner can modify leaderboard records.");
+  }
+
+  const target = message.mentions.members.first();
+  const amount = parseInt(args[1], 10);
+
+  if (!target || isNaN(amount) || amount <= 0) {
+    return message.reply("Usage: `-removeexile @user <positive number>`");
+  }
+
+  const confirmed = await confirmWithReactions(message, `Remove up to ${amount} exile${amount > 1 ? 's' : ''} from ${target.user.username}? React with ✅ to confirm or ❌ to cancel.`);
+  if (!confirmed) return message.channel.send('Action cancelled.');
+
+  try {
+    await db.query(
+      `DELETE FROM exiles WHERE target = $1 ORDER BY timestamp ASC LIMIT $2`,
+      [target.id, amount]
+    );
+
+    message.channel.send(`Removed up to ${amount} exile${amount > 1 ? 's' : ''} for ${target.user.username}.`);
+  } catch (err) {
+    console.error(err);
+    message.reply('Error removing exile entries.');
+  }
+}
+
+if (command === '-resetleaderboard') {
+  if (message.guild.ownerId !== message.author.id) {
+    return message.reply("Only the server owner can reset exile records.");
+  }
+
+  const target = message.mentions.members.first();
+  if (!target) {
+    return message.reply('Please mention a valid user to reset their leaderboard score.');
+  }
+
+  const confirmed = await confirmWithReactions(message, `Are you sure you want to completely reset ${target.user.username}'s exile record? React with ✅ to confirm or ❌ to cancel.`);
+  if (!confirmed) return message.channel.send('Action cancelled.');
+
+  try {
+    await db.query(`DELETE FROM exiles WHERE target = $1`, [target.id]);
+    message.channel.send(`Leaderboard record reset for ${target.user.username}.`);
+  } catch (err) {
+    console.error(err);
+    message.reply('An error occurred while resetting the leaderboard record.');
   }
 }
 });
