@@ -78,12 +78,6 @@ function checkCooldown(userId, command, message) {
   cooldowns.set(key, now);
   return false;
 }
-
-client.once('ready', () => {
-  console.log(`Logged in as ${client.user.tag}`);
-  client.user.setActivity('Exiling buddies.');
-});
-
 async function confirmWithReactions(message, promptText) {
   const confirmMsg = await message.channel.send(promptText);
   await confirmMsg.react('✅');
@@ -106,6 +100,11 @@ async function confirmWithReactions(message, promptText) {
     return false;
   }
 }
+
+client.once('ready', () => {
+  console.log(`Logged in as ${client.user.tag}`);
+  client.user.setActivity('Exiling buddies.');
+});
 
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
