@@ -253,7 +253,7 @@ client.on('messageCreate', async (message) => {
 if (command === '-hi') {
   if (checkCooldown(message.author.id, command, message)) return;
 
-  // 1% chance to exile regular user
+  // 1% chance to exile the message author (non-mods/admins)
   if (
     !message.member.roles.cache.has(ROLE_IDS.mod) &&
     !message.member.roles.cache.has(ROLE_IDS.admin) &&
@@ -300,7 +300,7 @@ if (command === '-hi') {
     }
   }
 
-  // Roast someone randomly
+  // Pick a random member and roast them
   const members = await message.guild.members.fetch();
   const filtered = members.filter(m => !m.user.bot && m.id !== message.author.id);
   if (filtered.size === 0) return message.reply("you will die....");
@@ -309,9 +309,11 @@ if (command === '-hi') {
   const roast = roasts[Math.floor(Math.random() * roasts.length)];
 
   if (roast.startsWith('http')) {
-    message.channel.send(roast); // Media link
+    message.channel.send(roast); // Direct media link
+  } else if (roast.includes('{user}')) {
+    message.channel.send(roast.replace('{user}', randomMember.user.username)); // Replace {user}
   } else {
-    message.channel.send(`${randomMember.user.username} ${roast}`); // Text roast
+    message.channel.send(`${randomMember.user.username} ${roast}`); // Append name by default
   }
 }
 });
