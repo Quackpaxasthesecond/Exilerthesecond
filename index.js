@@ -190,13 +190,13 @@ if (command === '-unexile') {
 
     if (isUncle && isSwagger) {
       await target.roles.add([ROLE_IDS.uncle, ROLE_IDS.swaggers]);
-      message.channel.send(`${target.user.username} has been unexiled and regained the power of both unc and swag 😤`);
+      message.channel.send(`${target.user.username} the unc has been unexiled. with their lil swag too ig `);
     } else if (isUncle) {
       await target.roles.add(ROLE_IDS.uncle);
       message.channel.send(`${target.user.username} the unc has been unexiled`);
     } else if (isSwagger) {
       await target.roles.add(ROLE_IDS.swaggers);
-      message.channel.send(`${target.user.username} has been unexiled. with your little swag too ig`);
+      message.channel.send(`${target.user.username} has been unexiled. with their lil swag too ig`);
     } else {
       message.channel.send(`${target.user.username} has been unexiled.`);
     }
