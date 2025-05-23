@@ -1,3 +1,13 @@
+const fs = require('fs');
+const path = require('path');
+
+const commands = new Map();
+const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+
+for (const file of commandFiles) {
+  const command = require(`./commands/${file}`);
+  commands.set(command.name, command);
+}
 const timers = new Map();
 const { Client, GatewayIntentBits } = require('discord.js');
 const { Client: PgClient } = require('pg');
@@ -97,18 +107,19 @@ client.on('messageCreate', async (message) => {
   const args = message.content.trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
-  if (command === '-help') {
-    if (checkCooldown(message.author.id, command, message)) return;
-    const helpMessage = `
-**Bot Commands:**
-- \`-exile @user\` : Exile a user (mods/admins only)
-- \`-unexile @user\` : Unexile a user (mods/admins only)
-- \`-myexiles\` : Show how many people you exiled (mods/admins only)
-- \`-leaderboard\` : Show the top exiled users
-- \`-hi\` : random stuffs :3
-    `;
-    return message.channel.send(helpMessage);
-  }
+if (commands.has(command.slice(1))) {
+  const cmd = commands.get(command.slice(1));
+  cmd.execute(message, args, {
+    db,
+    timers,
+    client,
+    checkCooldown,
+    ROLE_IDS,
+    SPECIAL_MEMBERS,
+    SWAGGER_MEMBERS,
+    confirmAction
+  });
+}
 
  if (command === '-exile') {
     if (
@@ -330,8 +341,6 @@ if (command === '-hi') {
     message.channel.send(`${randomMember.user.username} ${roast}`); // Append name by default
   }
 }
-
-// Add exile entries manually
 if (command === '-addexile') {
   if (message.guild.ownerId !== message.author.id) {
     return message.reply("Only the server owner can modify leaderboard records.");
@@ -360,8 +369,6 @@ if (command === '-addexile') {
     message.reply('Error adding fake exile entries.');
   }
 }
-
-// Remove exile entries
 if (command === '-removeexile') {
   if (message.guild.ownerId !== message.author.id) {
     return message.reply("Only the server owner can modify leaderboard records.");
@@ -389,7 +396,6 @@ if (command === '-removeexile') {
     message.reply('Error removing exile entries.');
   }
 }
-
 if (command === '-resetleaderboard') {
   if (message.guild.ownerId !== message.author.id) {
     return message.reply("Only the server owner can reset exile records.");
