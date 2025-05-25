@@ -1,29 +1,47 @@
 const fs = require('fs');
 const path = require('path');
-
-const commands = new Map();
-const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
-
-for (const file of commandFiles) {
-  const command = require(`./commands/${file}`);
-  commands.set(command.name, command);
-}
-const timers = new Map();
 const { Client, GatewayIntentBits } = require('discord.js');
 const { Client: PgClient } = require('pg');
 require('dotenv').config();
 const http = require('http');
 const roasts = require('./roasts');
 
-// HTTP server for uptime monitoring
-const server = http.createServer((req, res) => {
+// --- Constants ---
+const ROLE_IDS = {
+  exiled: '1208808796890337350',
+  swaggers: '1202948499193335828',
+  uncle: '1351986650754056354',
+  mod: '1353414310499455027',
+  admin: '1351985637602885734',
+};
+const SPECIAL_MEMBERS = [
+  '1346764665593659393', '1234493339638825054', '1149822228620382248',
+  '1123873768507457536', '696258636602802226', '512964486148390922',
+  '1010180074990993429', '464567511615143962', '977923308387455066',
+  '800291423933038612', '872408669151690755', '1197176029815517257',
+  '832354579890569226',
+];
+const SWAGGER_MEMBERS = [
+  '696258636602802226', '699154992891953215', '1025984312727842846',
+  '800291423933038612', '832354579890569226',
+];
+
+// --- Command Loader ---
+const commands = new Map();
+fs.readdirSync('./commands').filter(f => f.endsWith('.js')).forEach(file => {
+  const command = require(`./commands/${file}`);
+  commands.set(command.name, command);
+});
+
+// --- HTTP Server for Uptime ---
+http.createServer((req, res) => {
   res.writeHead(200);
   res.end('Bot is running!');
-});
-server.listen(3000, '0.0.0.0', () => {
+}).listen(3000, '0.0.0.0', () => {
   console.log('HTTP server ready on port 3000');
 });
 
+// --- Discord Client ---
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -33,15 +51,9 @@ const client = new Client({
   ],
 });
 
-// PostgreSQL DB
-const db = new PgClient({
-  connectionString: process.env.POSTGRES_URL,
-});
-db.connect()
-  .then(() => console.log('Connected to PostgreSQL database.'))
-  .catch(err => console.error('Postgres connection error:', err));
-
-// Create table if not exists (run at startup)
+// --- Database Setup ---
+const db = new PgClient({ connectionString: process.env.POSTGRES_URL });
+db.connect().then(() => console.log('Connected to PostgreSQL database.')).catch(err => console.error('Postgres connection error:', err));
 db.query(`
   CREATE TABLE IF NOT EXISTS exiles (
     id SERIAL PRIMARY KEY,
@@ -51,44 +63,26 @@ db.query(`
   );
 `).catch(err => console.error(err));
 
-const ROLE_IDS = {
-  exiled: '1208808796890337350',
-  swaggers: '1202948499193335828',
-  uncle: '1351986650754056354',
-  mod: '1353414310499455027',
-  admin: '1351985637602885734',
-};
-
-const SPECIAL_MEMBERS = [ // Uncle refugeers
-  '1346764665593659393', '1234493339638825054', '1149822228620382248',
-  '1123873768507457536', '696258636602802226', '512964486148390922',
-  '1010180074990993429', '464567511615143962', '977923308387455066',
-  '800291423933038612', '872408669151690755', '1197176029815517257',
-  '832354579890569226',
-];
-
-const SWAGGER_MEMBERS = [ 
- '696258636602802226',
- '699154992891953215',
- '1025984312727842846',
- '800291423933038612',
- '832354579890569226',
-];
-
+// --- Utility ---
+const timers = new Map();
 const cooldowns = new Map();
+
+function checkCooldown(userId, command, message) {
+  const now = Date.now();
+  const key = `${userId}:${command}`;
+  if (cooldowns.has(key) && now - cooldowns.get(key) < 3000) {
+    message.reply('Slow down!');
+    return true;
+  }
+  cooldowns.set(key, now);
+  return false;
+}
 
 async function confirmAction(message, promptText) {
   const filter = m => m.author.id === message.author.id;
   await message.channel.send(promptText);
-
   try {
-    const collected = await message.channel.awaitMessages({
-      filter,
-      max: 1,
-      time: 15000,
-      errors: ['time']
-    });
-
+    const collected = await message.channel.awaitMessages({ filter, max: 1, time: 15000, errors: ['time'] });
     const response = collected.first().content.toLowerCase();
     return response === 'yes' || response === 'confirm';
   } catch {
@@ -96,6 +90,7 @@ async function confirmAction(message, promptText) {
   }
 }
 
+// --- Event Handlers ---
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
   client.user.setActivity('Exiling buddies.');
@@ -103,25 +98,20 @@ client.once('ready', () => {
 
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
-
   const args = message.content.trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
-if (commands.has(command.slice(1))) {
-  const cmd = commands.get(command.slice(1));
-  cmd.execute(message, args, {
-    db,
-    timers,
-    client,
-    checkCooldown,
-    ROLE_IDS,
-    SPECIAL_MEMBERS,
-    SWAGGER_MEMBERS,
-    confirmAction
-  });
-}
+  // --- Modular Commands ---
+  if (commands.has(command.slice(1))) {
+    const cmd = commands.get(command.slice(1));
+    cmd.execute(message, args, {
+      db, timers, client, checkCooldown, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS, confirmAction
+    });
+    return;
+  }
 
- if (command === '-exile') {
+  // --- Exile Command ---
+  if (command === '-exile') {
     if (
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
@@ -186,45 +176,47 @@ if (commands.has(command.slice(1))) {
     }
   }
 
-if (command === '-unexile') {
-  if (checkCooldown(message.author.id, command, message)) return;
+  // --- Unexile Command ---
+  if (command === '-unexile') {
+    if (checkCooldown(message.author.id, command, message)) return;
 
-  if (
-    !message.member.roles.cache.has(ROLE_IDS.mod) &&
-    !message.member.roles.cache.has(ROLE_IDS.admin) &&
-    message.guild.ownerId !== message.author.id
-  ) return message.reply("nice try buddy");
+    if (
+      !message.member.roles.cache.has(ROLE_IDS.mod) &&
+      !message.member.roles.cache.has(ROLE_IDS.admin) &&
+      message.guild.ownerId !== message.author.id
+    ) return message.reply("nice try buddy");
 
-  const target = message.mentions.members.first();
-  if (!target) return message.reply('Please mention a valid user to unexile.');
-  if (!target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.username} is not exiled!`);
+    const target = message.mentions.members.first();
+    if (!target) return message.reply('Please mention a valid user to unexile.');
+    if (!target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.username} is not exiled!`);
 
-  try {
-    await target.roles.remove(ROLE_IDS.exiled);
+    try {
+      await target.roles.remove(ROLE_IDS.exiled);
 
-    // Restore roles based on membership
-    const isUncle = SPECIAL_MEMBERS.includes(target.id);
-    const isSwagger = SWAGGER_MEMBERS.includes(target.id);
+      // Restore roles based on membership
+      const isUncle = SPECIAL_MEMBERS.includes(target.id);
+      const isSwagger = SWAGGER_MEMBERS.includes(target.id);
 
-    if (isUncle && isSwagger) {
-      await target.roles.add([ROLE_IDS.uncle, ROLE_IDS.swaggers]);
-      message.channel.send(`${target.user.username} the unc has been unexiled. with their lil swag too ig `);
-    } else if (isUncle) {
-      await target.roles.add(ROLE_IDS.uncle);
-      message.channel.send(`${target.user.username} the unc has been unexiled`);
-    } else if (isSwagger) {
-      await target.roles.add(ROLE_IDS.swaggers);
-      message.channel.send(`${target.user.username} has been unexiled. with their lil swag too ig`);
-    } else {
-      message.channel.send(`${target.user.username} has been unexiled.`);
+      if (isUncle && isSwagger) {
+        await target.roles.add([ROLE_IDS.uncle, ROLE_IDS.swaggers]);
+        message.channel.send(`${target.user.username} the unc has been unexiled. with their lil swag too ig `);
+      } else if (isUncle) {
+        await target.roles.add(ROLE_IDS.uncle);
+        message.channel.send(`${target.user.username} the unc has been unexiled`);
+      } else if (isSwagger) {
+        await target.roles.add(ROLE_IDS.swaggers);
+        message.channel.send(`${target.user.username} has been unexiled. with their lil swag too ig`);
+      } else {
+        message.channel.send(`${target.user.username} has been unexiled.`);
+      }
+
+    } catch (err) {
+      console.error(err);
+      message.reply('An error occurred while trying to unexile the user.');
     }
-
-  } catch (err) {
-    console.error(err);
-    message.reply('An error occurred while trying to unexile the user.');
   }
-}
 
+  // --- MyExiles Command ---
   if (command === '-myexiles') {
     if (checkCooldown(message.author.id, command, message)) return;
 
@@ -249,6 +241,7 @@ if (command === '-unexile') {
     }
   }
 
+  // --- Leaderboard Command ---
   if (command === '-leaderboard') {
     if (checkCooldown(message.author.id, command, message)) return;
 
@@ -275,148 +268,143 @@ if (command === '-unexile') {
     }
   }
 
-if (command === '-hi') {
-  if (checkCooldown(message.author.id, command, message)) return;
+  // --- Hi Command ---
+  if (command === '-hi') {
+    if (checkCooldown(message.author.id, command, message)) return;
 
-  // 1% chance to exile the message author (non-mods/admins)
-  if (
-    !message.member.roles.cache.has(ROLE_IDS.mod) &&
-    !message.member.roles.cache.has(ROLE_IDS.admin) &&
-    message.guild.ownerId !== message.author.id
-  ) {
-    if (Math.random() < 0.01) {
-      try {
-        const wasSwagger = message.member.roles.cache.has(ROLE_IDS.swaggers);
-        const wasUncle = message.member.roles.cache.has(ROLE_IDS.uncle);
+    // 1% chance to exile the message author (non-mods/admins)
+    if (
+      !message.member.roles.cache.has(ROLE_IDS.mod) &&
+      !message.member.roles.cache.has(ROLE_IDS.admin) &&
+      message.guild.ownerId !== message.author.id
+    ) {
+      if (Math.random() < 0.01) {
+        try {
+          const wasSwagger = message.member.roles.cache.has(ROLE_IDS.swaggers);
+          const wasUncle = message.member.roles.cache.has(ROLE_IDS.uncle);
 
-        await message.member.roles.add(ROLE_IDS.exiled);
-        await message.member.roles.remove(ROLE_IDS.swaggers);
-        await message.member.roles.remove(ROLE_IDS.uncle);
+          await message.member.roles.add(ROLE_IDS.exiled);
+          await message.member.roles.remove(ROLE_IDS.swaggers);
+          await message.member.roles.remove(ROLE_IDS.uncle);
 
-        await db.query(
-          `INSERT INTO exiles (issuer, target) VALUES ($1, $2)`,
-          [message.author.id, message.author.id]
-        );
+          await db.query(
+            `INSERT INTO exiles (issuer, target) VALUES ($1, $2)`,
+            [message.author.id, message.author.id]
+          );
 
-        message.channel.send(`${message.author.username} just got exiled for using -hi 😭`);
+          message.channel.send(`${message.author.username} just got exiled for using -hi 😭`);
 
-        setTimeout(async () => {
-          try {
-            await message.member.roles.remove(ROLE_IDS.exiled);
+          setTimeout(async () => {
+            try {
+              await message.member.roles.remove(ROLE_IDS.exiled);
 
-            if (wasUncle || SPECIAL_MEMBERS.includes(message.author.id)) {
-              await message.member.roles.add(ROLE_IDS.uncle);
+              if (wasUncle || SPECIAL_MEMBERS.includes(message.author.id)) {
+                await message.member.roles.add(ROLE_IDS.uncle);
+              }
+              if (wasSwagger || SWAGGER_MEMBERS.includes(message.author.id)) {
+                await message.member.roles.add(ROLE_IDS.swaggers);
+              }
+
+              message.channel.send(`${message.author.username} has been automatically unexiled after 5 minutes.`);
+            } catch (err) {
+              console.error('Failed to auto-unexile:', err);
             }
-            if (wasSwagger || SWAGGER_MEMBERS.includes(message.author.id)) {
-              await message.member.roles.add(ROLE_IDS.swaggers);
-            }
-
-            message.channel.send(`${message.author.username} has been automatically unexiled after 5 minutes.`);
-          } catch (err) {
-            console.error('Failed to auto-unexile:', err);
-          }
-        }, 5 * 60 * 1000);
-        return;
-      } catch (err) {
-        console.error(err);
-        message.reply('you lucky as hell for dodging that 1% exile chance');
-        return;
+          }, 5 * 60 * 1000);
+          return;
+        } catch (err) {
+          console.error(err);
+          message.reply('you lucky as hell for dodging that 1% exile chance');
+          return;
+        }
       }
     }
-  }
 
-  // Pick a random member and roast them
-  const members = await message.guild.members.fetch();
-  const filtered = members.filter(m => !m.user.bot && m.id !== message.author.id);
-  if (filtered.size === 0) return message.reply("you will die....");
+    // Pick a random member and roast them
+    const members = await message.guild.members.fetch();
+    const filtered = members.filter(m => !m.user.bot && m.id !== message.author.id);
+    if (filtered.size === 0) return message.reply("you will die....");
 
-  const randomMember = filtered.random();
-  const roast = roasts[Math.floor(Math.random() * roasts.length)];
+    const randomMember = filtered.random();
+    const roast = roasts[Math.floor(Math.random() * roasts.length)];
 
-  if (roast.startsWith('http')) {
-    message.channel.send(roast); // Direct media link
-  } else if (roast.includes('{user}')) {
-    message.channel.send(roast.replace('{user}', randomMember.user.username)); // Replace {user}
-  } else {
-    message.channel.send(`${randomMember.user.username} ${roast}`); // Append name by default
-  }
-}
-if (command === '-addexile') {
-  if (message.guild.ownerId !== message.author.id) {
-    return message.reply("Only the server owner can modify leaderboard records.");
-  }
-
-  const target = message.mentions.members.first();
-  const amount = parseInt(args[1], 10);
-
-  if (!target || isNaN(amount) || amount <= 0) {
-    return message.reply("Usage: `-addexile @user <positive number>`");
-  }
-
-  try {
-    const values = [];
-    for (let i = 0; i < amount; i++) {
-      values.push(`('${message.author.id}', '${target.id}')`);
+    if (roast.startsWith('http')) {
+      message.channel.send(roast); // Direct media link
+    } else if (roast.includes('{user}')) {
+      message.channel.send(roast.replace('{user}', randomMember.user.username)); // Replace {user}
+    } else {
+      message.channel.send(`${randomMember.user.username} ${roast}`); // Append name by default
     }
-
-    await db.query(
-      `INSERT INTO exiles (issuer, target) VALUES ${values.join(',')}`
-    );
-
-    message.channel.send(`Added ${amount} exile${amount > 1 ? 's' : ''} for ${target.user.username}.`);
-  } catch (err) {
-    console.error(err);
-    message.reply('Error adding fake exile entries.');
-  }
-}
-if (command === '-removeexile') {
-  if (message.guild.ownerId !== message.author.id) {
-    return message.reply("Only the server owner can modify leaderboard records.");
   }
 
-  const target = message.mentions.members.first();
-  const amount = parseInt(args[1], 10);
-
-  if (!target || isNaN(amount) || amount <= 0) {
-    return message.reply("Usage: `-removeexile @user <positive number>`");
+  // --- Owner-only: Add Exile(s) ---
+  if (command === '-addexile') {
+    if (message.guild.ownerId !== message.author.id) {
+      return message.reply("Only the server owner can modify leaderboard records.");
+    }
+    const target = message.mentions.members.first();
+    const amount = parseInt(args[1], 10);
+    if (!target || isNaN(amount) || amount <= 0) {
+      return message.reply("Usage: `-addexile @user <positive number>`");
+    }
+    try {
+      const values = [];
+      for (let i = 0; i < amount; i++) {
+        values.push(`('${message.author.id}', '${target.id}')`);
+      }
+      await db.query(`INSERT INTO exiles (issuer, target) VALUES ${values.join(',')}`);
+      message.channel.send(`Added ${amount} exile${amount > 1 ? 's' : ''} for ${target.user.username}.`);
+    } catch (err) {
+      console.error(err);
+      message.reply('Error adding fake exile entries.');
+    }
+    return;
   }
 
-  const confirmed = await confirmAction(message, `Type \`yes\` to remove up to ${amount} exiles for ${target.user.username}.`);
-  if (!confirmed) return message.channel.send('Action cancelled.');
-
-  try {
-    await db.query(
-      `DELETE FROM exiles WHERE target = $1 ORDER BY timestamp ASC LIMIT $2`,
-      [target.id, amount]
-    );
-
-    message.channel.send(`Removed up to ${amount} exile${amount > 1 ? 's' : ''} for ${target.user.username}.`);
-  } catch (err) {
-    console.error(err);
-    message.reply('Error removing exile entries.');
+  // --- Owner-only: Remove Exile(s) ---
+  if (command === '-removeexile') {
+    if (message.guild.ownerId !== message.author.id) {
+      return message.reply("Only the server owner can modify leaderboard records.");
+    }
+    const target = message.mentions.members.first();
+    const amount = parseInt(args[1], 10);
+    if (!target || isNaN(amount) || amount <= 0) {
+      return message.reply("Usage: `-removeexile @user <positive number>`");
+    }
+    const confirmed = await confirmAction(message, `Type \`yes\` to remove up to ${amount} exiles for ${target.user.username}.`);
+    if (!confirmed) return message.channel.send('Action cancelled.');
+    try {
+      await db.query(
+        `DELETE FROM exiles WHERE target = $1 ORDER BY timestamp ASC LIMIT $2`,
+        [target.id, amount]
+      );
+      message.channel.send(`Removed up to ${amount} exile${amount > 1 ? 's' : ''} for ${target.user.username}.`);
+    } catch (err) {
+      console.error(err);
+      message.reply('Error removing exile entries.');
+    }
+    return;
   }
-}
-if (command === '-resetleaderboard') {
-  if (message.guild.ownerId !== message.author.id) {
-    return message.reply("Only the server owner can reset exile records.");
-  }
 
-  const target = message.mentions.members.first();
-  if (!target) {
-    return message.reply('Please mention a valid user to reset their leaderboard score.');
+  // --- Owner-only: Reset Leaderboard for a User ---
+  if (command === '-resetleaderboard') {
+    if (message.guild.ownerId !== message.author.id) {
+      return message.reply("Only the server owner can reset exile records.");
+    }
+    const target = message.mentions.members.first();
+    if (!target) {
+      return message.reply('Please mention a valid user to reset their leaderboard score.');
+    }
+    const confirmed = await confirmAction(message, `Type \`yes\` to reset all exiles for ${target.user.username}.`);
+    if (!confirmed) return message.channel.send('Action cancelled.');
+    try {
+      await db.query(`DELETE FROM exiles WHERE target = $1`, [target.id]);
+      message.channel.send(`Leaderboard record reset for ${target.user.username}.`);
+    } catch (err) {
+      console.error(err);
+      message.reply('An error occurred while resetting the leaderboard record.');
+    }
+    return;
   }
-
-  const confirmed = await confirmAction(message, `Type \`yes\` to reset all exiles for ${target.user.username}.`);
-  if (!confirmed) return message.channel.send('Action cancelled.');
-
-  try {
-    await db.query(`DELETE FROM exiles WHERE target = $1`, [target.id]);
-    message.channel.send(`Leaderboard record reset for ${target.user.username}.`);
-  } catch (err) {
-    console.error(err);
-    message.reply('An error occurred while resetting the leaderboard record.');
-  }
-}
 });
 
 client.login(process.env.DISCORD_BOT_TOKEN).catch(err => {
