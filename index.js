@@ -66,7 +66,16 @@ db.query(`
 const timers = new Map();
 const cooldowns = new Map();
 
-function checkCooldown(userId, command, message) {
+function checkCooldown(userId, command, message, member) {
+  // No cooldown for mods/admins/owner
+  if (
+    member &&
+    (member.roles.cache.has(ROLE_IDS.mod) ||
+     member.roles.cache.has(ROLE_IDS.admin) ||
+     (member.guild && member.guild.ownerId === member.id))
+  ) {
+    return false;
+  }
   const now = Date.now();
   const key = `${userId}:${command}`;
   if (cooldowns.has(key) && now - cooldowns.get(key) < 3000) {
@@ -111,6 +120,7 @@ client.on('messageCreate', async (message) => {
 
   // --- Exile Command ---
   if (command === '-exile') {
+    if (checkCooldown(message.author.id, command, message, message.member)) return;
     if (
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
@@ -177,7 +187,7 @@ client.on('messageCreate', async (message) => {
 
   // --- Unexile Command ---
   if (command === '-unexile') {
-    if (checkCooldown(message.author.id, command, message)) return;
+    if (checkCooldown(message.author.id, command, message, message.member)) return;
 
     if (
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
@@ -217,7 +227,7 @@ client.on('messageCreate', async (message) => {
 
   // --- MyExiles Command ---
   if (command === '-myexiles') {
-    if (checkCooldown(message.author.id, command, message)) return;
+    if (checkCooldown(message.author.id, command, message, message.member)) return;
 
     if (
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
@@ -242,7 +252,7 @@ client.on('messageCreate', async (message) => {
 
   // --- Leaderboard Command ---
   if (command === '-leaderboard') {
-    if (checkCooldown(message.author.id, command, message)) return;
+    if (checkCooldown(message.author.id, command, message, message.member)) return;
 
     try {
       const res = await db.query(
@@ -269,7 +279,7 @@ client.on('messageCreate', async (message) => {
 
   // --- Hi Command ---
   if (command === '-hi') {
-    if (checkCooldown(message.author.id, command, message)) return;
+    if (checkCooldown(message.author.id, command, message, message.member)) return;
 
     // 1% chance to exile the message author (non-mods/admins)
     if (
@@ -337,6 +347,7 @@ client.on('messageCreate', async (message) => {
 
   // --- Owner-only: Add Exile(s) ---
   if (command === '-addexile') {
+    if (checkCooldown(message.author.id, command, message, message.member)) return;
     if (message.guild.ownerId !== message.author.id) {
       return message.reply("Only the server owner can modify leaderboard records.");
     }
@@ -361,6 +372,7 @@ client.on('messageCreate', async (message) => {
 
   // --- Owner-only: Remove Exile(s) ---
   if (command === '-removeexile') {
+    if (checkCooldown(message.author.id, command, message, message.member)) return;
     if (message.guild.ownerId !== message.author.id) {
       return message.reply("Only the server owner can modify leaderboard records.");
     }
@@ -389,6 +401,7 @@ client.on('messageCreate', async (message) => {
 
   // --- Owner-only: Reset Leaderboard for a User ---
   if (command === '-resetleaderboard') {
+    if (checkCooldown(message.author.id, command, message, message.member)) return;
     if (message.guild.ownerId !== message.author.id) {
       return message.reply("Only the server owner can reset exile records.");
     }
@@ -404,6 +417,97 @@ client.on('messageCreate', async (message) => {
     } catch (err) {
       console.error(err);
       message.reply('An error occurred while resetting the leaderboard record.');
+    }
+    return;
+  }
+
+  // --- Trial Command ---
+  if (command === '-trial') {
+    if (checkCooldown(message.author.id, command, message, message.member)) return;
+    // Only mods/admins can start trials
+    if (
+      !message.member.roles.cache.has(ROLE_IDS.mod) &&
+      !message.member.roles.cache.has(ROLE_IDS.admin) &&
+      message.guild.ownerId !== message.author.id
+    ) {
+      return message.reply("Only mods or admins can start a trial.");
+    }
+    const target = message.mentions.members.first();
+    if (!target) return message.reply('Please mention a valid user to put on trial.');
+
+    // Parse timer argument (supports s, m, h, d, w)
+    let timerMs = 30000; // default 30s
+    if (args[1]) {
+      const match = args[1].match(/^(\d+)([smhdw])?$/i);
+      if (match) {
+        const value = parseInt(match[1], 10);
+        const unit = match[2] ? match[2].toLowerCase() : 's';
+        switch (unit) {
+          case 'w': timerMs = value * 7 * 24 * 60 * 60 * 1000; break;
+          case 'd': timerMs = value * 24 * 60 * 60 * 1000; break;
+          case 'h': timerMs = value * 60 * 60 * 1000; break;
+          case 'm': timerMs = value * 60 * 1000; break;
+          case 's': default: timerMs = value * 1000; break;
+        }
+      }
+    }
+    // Human readable timer string
+    function formatTimer(ms) {
+      if (ms % (7 * 24 * 60 * 60 * 1000) === 0) return `${ms / (7 * 24 * 60 * 60 * 1000)} week(s)`;
+      if (ms % (24 * 60 * 60 * 1000) === 0) return `${ms / (24 * 60 * 60 * 1000)} day(s)`;
+      if (ms % (60 * 60 * 1000) === 0) return `${ms / (60 * 60 * 1000)} hour(s)`;
+      if (ms % (60 * 1000) === 0) return `${ms / (60 * 1000)} minute(s)`;
+      return `${ms / 1000} second(s)`;
+    }
+
+    // Cannot be used on mods/admins or the owner
+    if (
+      target.roles.cache.has(ROLE_IDS.mod) ||
+      target.roles.cache.has(ROLE_IDS.admin) ||
+      message.guild.ownerId === target.id
+    ) {
+      return message.reply("You can't put that user on trial.");
+    }
+
+    // Prevent trial if already exiled
+    if (target.roles.cache.has(ROLE_IDS.exiled)) {
+      return message.reply(`${target.user.tag} is already exiled!`);
+    }
+
+    // Send trial message
+    const trialMsg = await message.channel.send({
+      content: `**Trial Initiated**\nShould ${target} be exiled from the server?\nReact with ✅ or ❌ within ${formatTimer(timerMs)}.`
+    });
+    await trialMsg.react('✅');
+    await trialMsg.react('❌');
+
+    // Collect reactions for the specified time
+    const filter = (reaction, user) =>
+      ['✅', '❌'].includes(reaction.emoji.name) &&
+      !user.bot &&
+      message.guild.members.cache.has(user.id);
+
+    const collected = await trialMsg.awaitReactions({ filter, time: timerMs });
+
+    const yesVotes = collected.get('✅') ? collected.get('✅').users.cache.filter(u => !u.bot).size : 0;
+    const noVotes = collected.get('❌') ? collected.get('❌').users.cache.filter(u => !u.bot).size : 0;
+
+    if (yesVotes > noVotes) {
+      try {
+        await target.roles.add(ROLE_IDS.exiled);
+        await target.roles.remove(ROLE_IDS.swaggers).catch(() => {});
+        await target.roles.remove(ROLE_IDS.uncle).catch(() => {});
+        await db.query(
+          `INSERT INTO exiles (issuer, target) VALUES ($1, $2)`,
+          [message.author.id, target.id]
+        );
+        message.channel.send(`${target.user.username} has been found guilty and exiled by community vote!`);
+      } catch (err) {
+        console.error(err);
+        message.channel.send('Failed to exile the user.');
+      }
+    } else {
+      message.channel.send(`${target.user.username}, you’ve been spared... for now 👁️`);
     }
     return;
   }
