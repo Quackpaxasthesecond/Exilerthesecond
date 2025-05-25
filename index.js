@@ -451,7 +451,6 @@ client.on('messageCreate', async (message) => {
         }
       }
     }
-    // Human readable timer string
     function formatTimer(ms) {
       if (ms % (7 * 24 * 60 * 60 * 1000) === 0) return `${ms / (7 * 24 * 60 * 60 * 1000)} week(s)`;
       if (ms % (24 * 60 * 60 * 1000) === 0) return `${ms / (24 * 60 * 60 * 1000)} day(s)`;
@@ -474,12 +473,17 @@ client.on('messageCreate', async (message) => {
       return message.reply(`${target.user.tag} is already exiled!`);
     }
 
-    // Send trial message
+    // Send trial message and add reactions sequentially to avoid race conditions
     const trialMsg = await message.channel.send({
       content: `**Trial Initiated**\nShould ${target} be exiled from the server?\nReact with ✅ or ❌ within ${formatTimer(timerMs)}.`
     });
-    await trialMsg.react('✅');
-    await trialMsg.react('❌');
+    try {
+      await trialMsg.react('✅');
+      await trialMsg.react('❌');
+    } catch (err) {
+      console.error('Failed to add reactions:', err);
+      return message.channel.send('Failed to add reactions for voting.');
+    }
 
     // Collect reactions for the specified time
     const filter = (reaction, user) =>
@@ -487,7 +491,13 @@ client.on('messageCreate', async (message) => {
       !user.bot &&
       message.guild.members.cache.has(user.id);
 
-    const collected = await trialMsg.awaitReactions({ filter, time: timerMs });
+    let collected;
+    try {
+      collected = await trialMsg.awaitReactions({ filter, time: timerMs });
+    } catch (err) {
+      console.error('Error collecting reactions:', err);
+      return message.channel.send('Error collecting reactions.');
+    }
 
     const yesVotes = collected.get('✅') ? collected.get('✅').users.cache.filter(u => !u.bot).size : 0;
     const noVotes = collected.get('❌') ? collected.get('❌').users.cache.filter(u => !u.bot).size : 0;
