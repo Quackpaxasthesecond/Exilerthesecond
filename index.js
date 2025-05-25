@@ -16,14 +16,13 @@ const ROLE_IDS = {
 };
 const SPECIAL_MEMBERS = [
   '1346764665593659393', '1234493339638825054', '1149822228620382248',
-  '1123873768507457536', '696258636602802226', '512964486148390922',
-  '1010180074990993429', '464567511615143962', '977923308387455066',
-  '800291423933038612', '872408669151690755', '1197176029815517257',
-  '832354579890569226',
+  '696258636602802226', '512964486148390922', '1010180074990993429',
+  '464567511615143962', '977923308387455066', '800291423933038612',
+  '872408669151690755', '1197176029815517257', '832354579890569226',
 ];
 const SWAGGER_MEMBERS = [
   '696258636602802226', '699154992891953215', '1025984312727842846',
-  '800291423933038612', '832354579890569226',
+  '800291423933038226', '832354579890569226',
 ];
 
 // --- Command Loader ---
@@ -373,8 +372,11 @@ client.on('messageCreate', async (message) => {
     const confirmed = await confirmAction(message, `Type \`yes\` to remove up to ${amount} exiles for ${target.user.username}.`);
     if (!confirmed) return message.channel.send('Action cancelled.');
     try {
+      // Use a subquery to delete by id in order of timestamp
       await db.query(
-        `DELETE FROM exiles WHERE target = $1 ORDER BY timestamp ASC LIMIT $2`,
+        `DELETE FROM exiles WHERE id IN (
+          SELECT id FROM exiles WHERE target = $1 ORDER BY timestamp ASC LIMIT $2
+        )`,
         [target.id, amount]
       );
       message.channel.send(`Removed up to ${amount} exile${amount > 1 ? 's' : ''} for ${target.user.username}.`);
