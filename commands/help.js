@@ -11,6 +11,7 @@ module.exports = {
 - \`-myexiles\` : Show how many people you exiled (mods/admins only)
 - \`-leaderboard\` : Show the top exiled users
 - \`-hi\` : Random stuff
+- \`-hileaderboard\` : Show the top users who used -hi
     `;
     message.channel.send(helpMessage);
   }

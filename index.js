@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const { Client: PgClient } = require('pg');
 require('dotenv').config();
 const http = require('http');
@@ -59,6 +59,12 @@ db.query(`
     issuer TEXT NOT NULL,
     target TEXT NOT NULL,
     timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+  );
+`).catch(err => console.error(err));
+db.query(`
+  CREATE TABLE IF NOT EXISTS hi_usages (
+    user_id TEXT PRIMARY KEY,
+    count INTEGER DEFAULT 0
   );
 `).catch(err => console.error(err));
 
@@ -270,7 +276,11 @@ client.on('messageCreate', async (message) => {
         leaderboard += `${i + 1}. ${name} - ${res.rows[i].exile_count} exiles\n`;
       }
 
-      message.channel.send(leaderboard);
+      const embed = new EmbedBuilder()
+        .setTitle('Exile Leaderboard <:crying:1285606636853137560>')
+        .setDescription(leaderboard)
+        .setColor(0x7289da);
+      message.channel.send({ embeds: [embed] });
     } catch (err) {
       console.error(err);
       message.channel.send('An error occurred while fetching the leaderboard.');
@@ -280,6 +290,14 @@ client.on('messageCreate', async (message) => {
   // --- Hi Command ---
   if (command === '-hi') {
     if (checkCooldown(message.author.id, command, message, message.member)) return;
+
+    // Increment hi usage count in DB
+    try {
+      await db.query(`INSERT INTO hi_usages (user_id, count) VALUES ($1, 1)
+        ON CONFLICT (user_id) DO UPDATE SET count = hi_usages.count + 1`, [message.author.id]);
+    } catch (err) {
+      console.error('Failed to increment hi usage:', err);
+    }
 
     // 1% chance to exile the message author (non-mods/admins)
     if (
@@ -419,6 +437,38 @@ client.on('messageCreate', async (message) => {
       message.reply('An error occurred while resetting the leaderboard record.');
     }
     return;
+  }
+
+  // --- Hi Leaderboard Command ---
+  if (command === '-hileaderboard') {
+    if (checkCooldown(message.author.id, command, message, message.member)) return;
+    try {
+      const res = await db.query(
+        `SELECT user_id, count FROM hi_usages ORDER BY count DESC LIMIT 10`
+      );
+      if (res.rows.length === 0) {
+        return message.channel.send('No hi usages have been recorded yet.');
+      }
+      let leaderboard = '**-hi Usage Leaderboard**:\n';
+      for (let i = 0; i < res.rows.length; i++) {
+        let member;
+        try {
+          member = await message.guild.members.fetch(res.rows[i].user_id);
+        } catch {
+          member = null;
+        }
+        const name = member ? member.user.username : `Unknown (${res.rows[i].user_id})`;
+        leaderboard += `${i + 1}. ${name} - ${res.rows[i].count} hi's\n`;
+      }
+      const embed = new EmbedBuilder()
+        .setTitle('-hi Usage Leaderboard')
+        .setDescription(leaderboard)
+        .setColor(0x00b894);
+      message.channel.send({ embeds: [embed] });
+    } catch (err) {
+      console.error(err);
+      message.channel.send('An error occurred while fetching the hi leaderboard.');
+    }
   }
 });
 
