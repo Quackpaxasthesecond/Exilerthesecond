@@ -277,7 +277,7 @@ client.on('messageCreate', async (message) => {
       }
 
       const embed = new EmbedBuilder()
-        .setTitle('Exile Leaderboard <:crying:1285606636853137560>')
+        .setTitle('')
         .setDescription(leaderboard)
         .setColor(0x7289da);
       message.channel.send({ embeds: [embed] });
@@ -449,7 +449,7 @@ client.on('messageCreate', async (message) => {
       if (res.rows.length === 0) {
         return message.channel.send('No hi usages have been recorded yet.');
       }
-      let leaderboard = '**-hi Usage Leaderboard**:\n';
+      let leaderboard = '**test**:\n';
       for (let i = 0; i < res.rows.length; i++) {
         let member;
         try {
