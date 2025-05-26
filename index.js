@@ -277,7 +277,6 @@ client.on('messageCreate', async (message) => {
       }
 
       const embed = new EmbedBuilder()
-        .setTitle('')
         .setDescription(leaderboard)
         .setColor(0x7289da);
       message.channel.send({ embeds: [embed] });
@@ -449,7 +448,7 @@ client.on('messageCreate', async (message) => {
       if (res.rows.length === 0) {
         return message.channel.send('No hi usages have been recorded yet.');
       }
-      let leaderboard = '**test**:\n';
+      let leaderboard = '';
       for (let i = 0; i < res.rows.length; i++) {
         let member;
         try {
@@ -458,7 +457,7 @@ client.on('messageCreate', async (message) => {
           member = null;
         }
         const name = member ? member.user.username : `Unknown (${res.rows[i].user_id})`;
-        leaderboard += `${i + 1}. ${name} - ${res.rows[i].count} hi's\n`;
+        leaderboard += `${i + 1}. ${name} - ${res.rows[i].count} -hi used\n`;
       }
       const embed = new EmbedBuilder()
         .setTitle('-hi Usage Leaderboard')
