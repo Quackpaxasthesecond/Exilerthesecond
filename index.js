@@ -85,7 +85,16 @@ function checkCooldown(userId, command, message, member) {
   const now = Date.now();
   const key = `${userId}:${command}`;
   if (cooldowns.has(key) && now - cooldowns.get(key) < 3000) {
-    message.reply('Slow down!');
+    // --- Hi Cooldown Message ---
+    if (command === '-hi') {
+      const embed = new EmbedBuilder()
+        .setTitle('Whoa there, buddy!')
+        .setDescription('You are too fast for the hi gods. Try again in a sec! 🐢')
+        .setColor(0xffc300);
+      message.channel.send({ embeds: [embed] });
+    } else {
+      message.reply('Slow down!');
+    }
     return true;
   }
   cooldowns.set(key, now);
@@ -103,6 +112,38 @@ async function confirmAction(message, promptText) {
     return false;
   }
 }
+
+// --- Hi Command State ---
+const hiState = {
+  lastUser: null,
+  streak: 0,
+  lastTimestamp: 0,
+  chainCount: 0,
+  chainRecord: 0,
+  comboUsers: [],
+  comboTimeout: null,
+  duel: null, // {challengerId, opponentId, active}
+};
+const HI_COMBO_WINDOW = 10000; // 10 seconds
+const HI_CHAIN_WINDOW = 5000; // 5 seconds
+const HI_POWERUP_ROLE = 'hi-powerup'; // You can create this role in your server
+const FUNNY_EMOJIS = [
+  '<:lol:1362820974625423470>',
+  '<:help:1376872600935858263>',
+  '<:bricked:1373295644948561942>',
+  '<:silence:1182339569874636841>',
+  '<:ravage:1240078946251309087>',
+  '<:emoji_79:1292407706358911017>',
+  '<:zawg:1252687349838512179>'
+];
+
+// --- Hi Streaks State ---
+const hiStreaks = {};
+const HI_STREAK_RESET = 12 * 60 * 60 * 1000; // 12 hours in ms
+
+// --- Hi Duel State ---
+const hiDuels = {};
+// hiDuels: { [guildId]: { challengerId, opponentId, accepted, startTime, endTime, scores: { [userId]: count } } }
 
 // --- Event Handlers ---
 client.once('ready', () => {
@@ -288,9 +329,55 @@ client.on('messageCreate', async (message) => {
 
   // --- Hi Command ---
   if (command === '-hi') {
-    if (checkCooldown(message.author.id, command, message, message.member)) return;
+    // --- Hi Streaks (Individual, 12h reset) ---
+    const userId = message.author.id;
+    const now = Date.now();
+    if (!hiStreaks[userId] || now - hiStreaks[userId].last > HI_STREAK_RESET) {
+      hiStreaks[userId] = { streak: 1, last: now };
+    } else {
+      hiStreaks[userId].streak++;
+      hiStreaks[userId].last = now;
+    }
+    if (hiStreaks[userId].streak > 1 && hiStreaks[userId].streak % 5 === 0) {
+      message.channel.send(`${message.author.username} is on a hi streak of ${hiStreaks[userId].streak}!`);
+    }
 
-    // Increment hi usage count in DB
+    // --- Hi Duel Scoring ---
+    const guildId = message.guild.id;
+    if (hiDuels[guildId] && hiDuels[guildId].accepted && now < hiDuels[guildId].endTime) {
+      if (hiDuels[guildId].scores[userId] === undefined) hiDuels[guildId].scores[userId] = 0;
+      hiDuels[guildId].scores[userId]++;
+    }
+
+    // --- Hi Chain ---
+    if (now - hiState.lastTimestamp <= HI_CHAIN_WINDOW) {
+      hiState.chainCount++;
+      if (hiState.chainCount > hiState.chainRecord) {
+        hiState.chainRecord = hiState.chainCount;
+        message.channel.send(`New HI CHAIN RECORD! ${hiState.chainRecord} in a row! 🔥`);
+      }
+    } else {
+      hiState.chainCount = 1;
+    }
+    hiState.lastTimestamp = now;
+    // Announce streaks
+    if (hiState.streak > 1 && hiState.streak % 5 === 0) {
+      message.channel.send(`${message.author.username} is on a HI streak of ${hiState.streak}!`);
+    }
+
+    // --- Hi Combo ---
+    if (!hiState.comboUsers.includes(message.author.username)) {
+      hiState.comboUsers.push(message.author.username);
+    }
+    if (hiState.comboTimeout) clearTimeout(hiState.comboTimeout);
+    hiState.comboTimeout = setTimeout(() => {
+      if (hiState.comboUsers.length > 1) {
+        message.channel.send(`HI COMBO! ${hiState.comboUsers.join(', ')}! 💥`);
+      }
+      hiState.comboUsers = [];
+    }, HI_COMBO_WINDOW);
+
+    // Increment hi usage count in DB (only if not on cooldown)
     try {
       await db.query(`INSERT INTO hi_usages (user_id, count) VALUES ($1, 1)
         ON CONFLICT (user_id) DO UPDATE SET count = hi_usages.count + 1`, [message.author.id]);
@@ -358,8 +445,16 @@ client.on('messageCreate', async (message) => {
     } else if (roast.includes('{user}')) {
       message.channel.send(roast.replace('{user}', randomMember.user.username)); // Replace {user}
     } else {
-      message.channel.send(`${randomMember.user.username} ${roast}`); // Append name by default
+      message.channel.send(roast); // Just the roast, no username
     }
+    // --- Random Emoji Reaction ---
+    if (Math.random() < 0.2) {
+      try {
+        const emoji = FUNNY_EMOJIS[Math.floor(Math.random() * FUNNY_EMOJIS.length)];
+        await message.react(emoji);
+      } catch {}
+    }
+    return;
   }
 
   // --- Owner-only: Add Exile(s) ---
@@ -468,6 +563,103 @@ client.on('messageCreate', async (message) => {
       console.error(err);
       message.channel.send('An error occurred while fetching the hi leaderboard.');
     }
+  }
+
+  // --- Hi Duel Request Command ---
+  if (command === '-hiduel') {
+    const opponent = message.mentions.members.first();
+    if (!opponent || opponent.id === message.author.id || opponent.user.bot) {
+      return message.reply('Please mention a valid user to duel.');
+    }
+    const guildId = message.guild.id;
+    if (hiDuels[guildId] && hiDuels[guildId].accepted && Date.now() < hiDuels[guildId].endTime) {
+      return message.reply('A duel is already in progress in this server!');
+    }
+    hiDuels[guildId] = {
+      challengerId: message.author.id,
+      opponentId: opponent.id,
+      accepted: false,
+      scores: {},
+      startTime: 0,
+      endTime: 0
+    };
+    message.channel.send(`<@${opponent.id}>, you have been challenged to a HI DUEL by <@${message.author.id}>! Type -acceptduel to accept.`);
+    return;
+  }
+
+  // --- Hi Duel Accept Command ---
+  if (command === '-acceptduel') {
+    const guildId = message.guild.id;
+    const duel = hiDuels[guildId];
+    if (!duel || duel.accepted) return;
+    if (message.author.id !== duel.opponentId) return message.reply('You are not the challenged user.');
+    duel.accepted = true;
+    duel.startTime = Date.now();
+    duel.endTime = duel.startTime + 60000; // 1 minute
+    duel.scores = { [duel.challengerId]: 0, [duel.opponentId]: 0 };
+    message.channel.send(`HI DUEL STARTED! <@${duel.challengerId}> vs <@${duel.opponentId}>! Use -hi as much as you can in 1 minute!`);
+    setTimeout(() => {
+      const scores = duel.scores;
+      const cScore = scores[duel.challengerId] || 0;
+      const oScore = scores[duel.opponentId] || 0;
+      let winner, loser, winScore, loseScore;
+      if (cScore > oScore) {
+        winner = duel.challengerId; loser = duel.opponentId; winScore = cScore; loseScore = oScore;
+      } else if (oScore > cScore) {
+        winner = duel.opponentId; loser = duel.challengerId; winScore = oScore; loseScore = cScore;
+      } else {
+        message.channel.send(`HI DUEL ended in a tie! Both got ${cScore} hi's.`);
+        delete hiDuels[guildId];
+        return;
+      }
+      // Winner gets at least 60 hi's
+      db.query(`INSERT INTO hi_usages (user_id, count) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET count = hi_usages.count + $2`, [winner, Math.max(60, winScore - loseScore)]);
+      message.channel.send(`<@${winner}> wins the HI DUEL with ${winScore} hi's! (+${Math.max(60, winScore - loseScore)} hi leaderboard)`);
+      delete hiDuels[guildId];
+    }, 60000);
+    return;
+  }
+
+  // --- Check Hi Streaks Command ---
+  if (command === '-checkhistreaks') {
+    const userId = message.mentions.users.first()?.id || message.author.id;
+    const streak = hiStreaks[userId]?.streak || 0;
+    const user = message.mentions.users.first() || message.author;
+    if (streak > 0) {
+      message.channel.send(`${user.username} is on a HI streak of ${streak}!`);
+    } else {
+      message.channel.send(`${user.username} does not have a HI streak right now.`);
+    }
+    return;
+  }
+
+  // --- Hi Streak Leaderboard Command ---
+  if (command === '-streakleader') {
+    // Build a leaderboard of top hi streaks (current, not all-time)
+    const streakArray = Object.entries(hiStreaks)
+      .filter(([id, s]) => s.streak > 0)
+      .sort((a, b) => b[1].streak - a[1].streak)
+      .slice(0, 10);
+    if (streakArray.length === 0) {
+      return message.channel.send('No hi streaks have been recorded yet.');
+    }
+    let leaderboard = '**HI Streak Leaderboard**\n';
+    for (let i = 0; i < streakArray.length; i++) {
+      let member;
+      try {
+        member = await message.guild.members.fetch(streakArray[i][0]);
+      } catch {
+        member = null;
+      }
+      const name = member ? member.user.username : `Unknown (${streakArray[i][0]})`;
+      leaderboard += `${i + 1}. ${name} - ${streakArray[i][1].streak} streak\n`;
+    }
+    const embed = new EmbedBuilder()
+      .setTitle('HI Streak Leaderboard')
+      .setDescription(leaderboard)
+      .setColor(0x00b894);
+    message.channel.send({ embeds: [embed] });
+    return;
   }
 });
 

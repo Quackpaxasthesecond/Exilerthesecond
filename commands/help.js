@@ -10,8 +10,17 @@ module.exports = {
 - \`-unexile @user\` : Unexile a user (mods/admins only)
 - \`-myexiles\` : Show how many people you exiled (mods/admins only)
 - \`-leaderboard\` : Show the top exiled users
-- \`-hi\` : Random stuff
+- \`-hi\` : Use this for random fun! Try it often for streaks, combos, and roasts.
 - \`-hileaderboard\` : Show the top users who used -hi
+- \`-hiduel @user\` : Challenge someone to a HI DUEL. Most -hi's in 1 minute wins (at least 60 hi's bonus!)
+- \`-acceptduel\` : Accept a HI DUEL challenge.
+- \`-checkhistreaks [@user]\` : Check your (or another user's) current hi streak. Streak resets if you don't use -hi for 12 hours.
+- \`-streakleader\` : Show the top users with the highest current hi streaks
+
+**Hi Command Features:**
+- **Hi Streaks:** Use -hi repeatedly (within 12 hours) to build your personal streak.
+- **Hi Combo:** Multiple users using -hi in a short time triggers a HI COMBO!
+- **Hi Chain:** Use -hi quickly after someone else to build a chain and break records.
     `;
     message.channel.send(helpMessage);
   }
