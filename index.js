@@ -386,7 +386,18 @@ client.on('messageCreate', async (message) => {
     }
 
     // 1% chance to exile the message author (non-mods/admins)
+    let duelActive = false;
+    if (hiDuels[guildId] && hiDuels[guildId].accepted && now < hiDuels[guildId].endTime) {
+      // Duel is active, check if user is a duelist
+      if (
+        message.author.id === hiDuels[guildId].challengerId ||
+        message.author.id === hiDuels[guildId].opponentId
+      ) {
+        duelActive = true;
+      }
+    }
     if (
+      !duelActive &&
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
       message.guild.ownerId !== message.author.id
@@ -598,6 +609,12 @@ client.on('messageCreate', async (message) => {
     duel.endTime = duel.startTime + 60000; // 1 minute
     duel.scores = { [duel.challengerId]: 0, [duel.opponentId]: 0 };
     message.channel.send(`HI DUEL STARTED! <@${duel.challengerId}> vs <@${duel.opponentId}>! Use -hi as much as you can in 1 minute!`);
+    // --- Duel timer reminders every 10 seconds ---
+    for (let t = 50000; t >= 10000; t -= 10000) {
+      setTimeout(() => {
+        message.channel.send(`${t / 1000} seconds left`);
+      }, 60000 - t);
+    }
     setTimeout(() => {
       const scores = duel.scores;
       const cScore = scores[duel.challengerId] || 0;
@@ -613,8 +630,9 @@ client.on('messageCreate', async (message) => {
         return;
       }
       // Winner gets at least 60 hi's
-      db.query(`INSERT INTO hi_usages (user_id, count) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET count = hi_usages.count + $2`, [winner, Math.max(60, winScore - loseScore)]);
-      message.channel.send(`<@${winner}> wins the HI DUEL with ${winScore} hi's! (+${Math.max(60, winScore - loseScore)} hi leaderboard)`);
+      const diff = winScore - loseScore;
+      db.query(`INSERT INTO hi_usages (user_id, count) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET count = hi_usages.count + $2`, [winner, Math.max(60, diff)]);
+      message.channel.send(`<@${winner}> wins the HI DUEL with ${winScore} hi's! <@${loser}> had ${loseScore} hi's. (Diff: ${diff}) (+${Math.max(60, diff)} hi leaderboard)`);
       delete hiDuels[guildId];
     }, 60000);
     return;
