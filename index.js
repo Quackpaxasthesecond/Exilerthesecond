@@ -415,7 +415,7 @@ client.on('messageCreate', async (message) => {
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
       message.guild.ownerId !== message.author.id
     ) {
-      if (Math.random() < 0.01) {
+      if (Math.random() < 0.005) {
         try {
           const wasSwagger = message.member.roles.cache.has(ROLE_IDS.swaggers);
           const wasUncle = message.member.roles.cache.has(ROLE_IDS.uncle);
