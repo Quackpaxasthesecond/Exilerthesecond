@@ -153,7 +153,20 @@ client.once('ready', () => {
 
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
-  const args = message.content.trim().split(/ +/);
+
+  // --- Block -hi and related commands in specific channel ---
+  const HI_BLOCKED_CHANNEL = '1208809645205094481';
+  const HI_COMMANDS = [
+    '-hi', '-hileaderboard', '-hiduel', '-acceptduel', '-checkhistreaks', '-streakleader'
+  ];
+  const msgContent = message.content.trim().split(/ +/);
+  const msgCommand = msgContent[0]?.toLowerCase();
+  if (message.channel.id === HI_BLOCKED_CHANNEL && HI_COMMANDS.includes(msgCommand)) {
+    return message.reply('The commands are disabled in this channel.');
+  }
+
+  // Now parse args/command as before
+  const args = msgContent;
   const command = args.shift().toLowerCase();
 
   // --- Modular Commands ---
