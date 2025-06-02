@@ -5,6 +5,7 @@ const { Client: PgClient } = require('pg');
 require('dotenv').config();
 const http = require('http');
 const roasts = require('./roasts');
+const hiExileMessages = require('./hiExileMessages');
 
 // --- Constants ---
 const ROLE_IDS = {
@@ -13,6 +14,7 @@ const ROLE_IDS = {
   uncle: '1351986650754056354',
   mod: '1353414310499455027',
   admin: '1351985637602885734',
+  hi_crown: '1379180965481676830', // Top -hi used role
 };
 const SPECIAL_MEMBERS = [
   '1346764665593659393', '1234493339638825054', '1149822228620382248',
@@ -71,6 +73,7 @@ db.query(`
 // --- Utility ---
 const timers = new Map();
 const cooldowns = new Map();
+const gambleCooldowns = new Map();
 
 function checkCooldown(userId, command, message, member) {
   // No cooldown for mods/admins/owner
@@ -394,14 +397,32 @@ client.on('messageCreate', async (message) => {
     try {
       await db.query(`INSERT INTO hi_usages (user_id, count) VALUES ($1, 1)
         ON CONFLICT (user_id) DO UPDATE SET count = hi_usages.count + 1`, [message.author.id]);
+      // Check for hi crown
+      const topRes = await db.query('SELECT user_id FROM hi_usages ORDER BY count DESC LIMIT 1');
+      const topUserId = topRes.rows[0]?.user_id;
+      if (topUserId) {
+        const guild = message.guild;
+        // Remove hi_crown from all except topUserId
+        const members = await guild.members.fetch();
+        for (const member of members.values()) {
+          if (member.roles.cache.has(ROLE_IDS.hi_crown) && member.id !== topUserId) {
+            await member.roles.remove(ROLE_IDS.hi_crown);
+          }
+        }
+        // Give hi_crown to topUserId if not already
+        const topMember = await guild.members.fetch(topUserId).catch(() => null);
+        if (topMember && !topMember.roles.cache.has(ROLE_IDS.hi_crown)) {
+          await topMember.roles.add(ROLE_IDS.hi_crown);
+          message.channel.send(`${topMember.user.username} holds the crown of most hi used\n-# get a job`);
+        }
+      }
     } catch (err) {
-      console.error('Failed to increment hi usage:', err);
+      console.error('Failed to increment hi usage or update hi crown:', err);
     }
 
     // 1% chance to exile the message author (non-mods/admins)
     let duelActive = false;
     if (hiDuels[guildId] && hiDuels[guildId].accepted && now < hiDuels[guildId].endTime) {
-      // Duel is active, check if user is a duelist
       if (
         message.author.id === hiDuels[guildId].challengerId ||
         message.author.id === hiDuels[guildId].opponentId
@@ -429,19 +450,22 @@ client.on('messageCreate', async (message) => {
             [message.author.id, message.author.id]
           );
 
-          message.channel.send(`${message.author.username} just got exiled for using -hi 😭`);
+          // Custom exile message
+          const exileMsg = hiExileMessages[Math.floor(Math.random() * hiExileMessages.length)].replace('{user}', message.author.username);
+          message.channel.send(exileMsg);
 
           setTimeout(async () => {
             try {
-              await message.member.roles.remove(ROLE_IDS.exiled);
-
+              // Only remove the role if the user is still exiled
+              const refreshed = await message.guild.members.fetch(message.author.id).catch(() => null);
+              if (!refreshed || !refreshed.roles.cache.has(ROLE_IDS.exiled)) return; // Already unexiled by mod/admin
+              await refreshed.roles.remove(ROLE_IDS.exiled);
               if (wasUncle || SPECIAL_MEMBERS.includes(message.author.id)) {
-                await message.member.roles.add(ROLE_IDS.uncle);
+                await refreshed.roles.add(ROLE_IDS.uncle);
               }
               if (wasSwagger || SWAGGER_MEMBERS.includes(message.author.id)) {
-                await message.member.roles.add(ROLE_IDS.swaggers);
+                await refreshed.roles.add(ROLE_IDS.swaggers);
               }
-
               message.channel.send(`${message.author.username} has been automatically unexiled after 5 minutes.`);
             } catch (err) {
               console.error('Failed to auto-unexile:', err);
@@ -690,6 +714,34 @@ client.on('messageCreate', async (message) => {
       .setDescription(leaderboard)
       .setColor(0x00b894);
     message.channel.send({ embeds: [embed] });
+    return;
+  }
+
+  // --- Gambling Command ---
+  if (command === '-gamble') {
+    const userId = message.author.id;
+    const now = Date.now();
+    const cooldown = 10 * 1000; // 10 seconds
+    if (gambleCooldowns.has(userId) && now - gambleCooldowns.get(userId) < cooldown) {
+      const secs = Math.ceil((cooldown - (now - gambleCooldowns.get(userId))) / 1000);
+      return message.reply(`You must wait ${secs} more second(s) before gambling again.`);
+    }
+    const amount = parseInt(args[0], 10);
+    if (!amount || amount <= 0) return message.reply('Usage: `-gamble <amount>`');
+    // Check user hi count
+    const res = await db.query('SELECT count FROM hi_usages WHERE user_id = $1', [userId]);
+    const hiCount = res.rows[0]?.count || 0;
+    if (hiCount < amount) return message.reply('You do not have enough hi to gamble that amount.');
+    // Coin flip
+    const win = Math.random() < 0.5;
+    if (win) {
+      await db.query('UPDATE hi_usages SET count = count + $1 WHERE user_id = $2', [amount, userId]);
+      message.reply(`You won! Your hi count increased by ${amount}.`);
+    } else {
+      await db.query('UPDATE hi_usages SET count = count - $1 WHERE user_id = $2', [amount, userId]);
+      message.reply(`You lost! Your hi count decreased by ${amount}.`);
+    }
+    gambleCooldowns.set(userId, now);
     return;
   }
 });

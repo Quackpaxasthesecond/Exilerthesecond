@@ -16,6 +16,7 @@ module.exports = {
 - \`-acceptduel\` : Accept a HI DUEL challenge.
 - \`-checkhistreaks [@user]\` : Check your (or another user's) current hi streak. Streak resets if you don't use -hi for 12 hours.
 - \`-streakleader\` : Show the top users with the highest current hi streaks
+- \`-gamble <amount>\` : Bet your hi count for a 50/50 chance to double or lose the amount.
 
 **Hi Command Features:**
 - **Hi Streaks:** Use -hi repeatedly (within 12 hours) to build your personal streak.
