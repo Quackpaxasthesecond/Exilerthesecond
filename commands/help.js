@@ -11,7 +11,7 @@ module.exports = {
 - \`-myexiles\` : Show how many people you exiled (mods/admins only)
 - \`-leaderboard\` : Show the top exiled users
 - \`-hi\` : Use this for random fun! Try it often for streaks, combos, and roasts.
-- \`-hiLB\` : Show the top users who used -hi
+- \`-hileaderboard\` : Show the top users who used -hi
 - \`-hiduel @user\` : Challenge someone to a HI DUEL. Most -hi's in 1 minute wins (at least 60 hi's bonus!)
 - \`-acceptduel\` : Accept a HI DUEL challenge. (Type this after being challenged)
 - \`-checkhistreaks [@user]\` : Check your (or another user's) current hi streak. Streak resets if you don't use -hi for 12 hours.

@@ -1,7 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
-  name: 'hileaderboard',
+  name: ('hileaderboard', 'hilb', 'hiLB'),
   execute: async (message, args, context) => {
     const { db, checkCooldown } = context;
     if (checkCooldown(message.author.id, '-hileaderboard', message, message.member)) return;
