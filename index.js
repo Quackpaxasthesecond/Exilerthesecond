@@ -77,6 +77,21 @@ db.query(`
     timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
   );
 `).catch(err => console.error(err));
+db.query(`
+  CREATE TABLE IF NOT EXISTS hi_streaks (
+    user_id TEXT PRIMARY KEY,
+    streak INTEGER DEFAULT 0,
+    last TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+  );
+`).catch(err => console.error(err));
+db.query(`
+  CREATE TABLE IF NOT EXISTS hi_chains (
+    guild_id TEXT PRIMARY KEY,
+    chain_count INTEGER DEFAULT 0,
+    chain_record INTEGER DEFAULT 0,
+    last_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+  );
+`).catch(err => console.error(err));
 
 // --- Utility ---
 const timers = new Map();
@@ -150,7 +165,7 @@ const FUNNY_EMOJIS = [
 
 // --- Hi Streaks State ---
 const hiStreaks = {};
-const HI_STREAK_RESET = 12 * 60 * 60 * 1000; // 12 hours in ms
+const HI_STREAK_RESET = 6 * 60 * 60 * 1000; // 6 hours in ms
 
 // --- Hi Duel State ---
 const hiDuels = {};

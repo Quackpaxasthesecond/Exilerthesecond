@@ -17,6 +17,8 @@ module.exports = {
     if (hiCount < amount) return message.reply('You do not have enough hi to gamble that amount.');
     // Coin flip
     const win = Math.random() < 0.5;
+    // 3% exile chance
+    const exileChance = Math.random() < 0.02;
     if (win) {
       // 1% chance for 100x multiplier
       if (Math.random() < 0.01) {
@@ -31,6 +33,11 @@ module.exports = {
     } else {
       await db.query('UPDATE hi_usages SET count = count - $1 WHERE user_id = $2', [amount, userId]);
       message.reply(`You lost! Your hi count decreased by ${amount}.`);
+    }
+    if (exileChance) {
+      // Exile logic: add your own exile implementation here
+      message.reply('Unlucky! You have been exiled by the gambling gods!');
+      // Optionally, call your exile command or logic here
     }
     gambleCooldowns.set(userId, now);
   }
