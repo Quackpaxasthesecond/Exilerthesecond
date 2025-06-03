@@ -55,6 +55,8 @@ module.exports = {
       hiDuels[guildId].scores[userId]++;
     }
     // Hi combo
+    if (!context.hiState) context.hiState = { comboUsers: [], comboTimeout: null };
+    const hiState = context.hiState;
     if (!hiState.comboUsers.includes(message.author.username)) {
       hiState.comboUsers.push(message.author.username);
     }
