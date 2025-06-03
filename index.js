@@ -721,9 +721,9 @@ client.on('messageCreate', async (message) => {
   if (command === '-gamble') {
     const userId = message.author.id;
     const now = Date.now();
-    const cooldown = 10 * 1000; // 10 seconds
+    const cooldown = 0.5 * 1000; // 0.5 seconds
     if (gambleCooldowns.has(userId) && now - gambleCooldowns.get(userId) < cooldown) {
-      const secs = Math.ceil((cooldown - (now - gambleCooldowns.get(userId))) / 1000);
+      const secs = ((cooldown - (now - gambleCooldowns.get(userId))) / 1000).toFixed(2);
       return message.reply(`You must wait ${secs} more second(s) before gambling again.`);
     }
     const amount = parseInt(args[0], 10);
@@ -735,8 +735,16 @@ client.on('messageCreate', async (message) => {
     // Coin flip
     const win = Math.random() < 0.5;
     if (win) {
-      await db.query('UPDATE hi_usages SET count = count + $1 WHERE user_id = $2', [amount, userId]);
-      message.reply(`You won! Your hi count increased by ${amount}.`);
+      // 1% chance for 100x multiplier
+      if (Math.random() < 0.01) {
+        const mult = 100;
+        const winnings = amount * mult;
+        await db.query('UPDATE hi_usages SET count = count + $1 WHERE user_id = $2', [winnings, userId]);
+        message.reply(`JACKPOT! You won the 100x mult and gained ${winnings} hi!`);
+      } else {
+        await db.query('UPDATE hi_usages SET count = count + $1 WHERE user_id = $2', [amount, userId]);
+        message.reply(`You won! Your hi count increased by ${amount}.`);
+      }
     } else {
       await db.query('UPDATE hi_usages SET count = count - $1 WHERE user_id = $2', [amount, userId]);
       message.reply(`You lost! Your hi count decreased by ${amount}.`);
