@@ -13,7 +13,7 @@ module.exports = {
 - \`-hi\` : Use this for random fun! Try it often for streaks, combos, and roasts.
 - \`-hiLB\` : Show the top users who used -hi
 - \`-hiduel @user\` : Challenge someone to a HI DUEL. Most -hi's in 1 minute wins (at least 60 hi's bonus!)
-- \`-acceptduel\` : Accept a HI DUEL challenge.
+- \`-acceptduel\` : Accept a HI DUEL challenge. (Type this after being challenged)
 - \`-checkhistreaks [@user]\` : Check your (or another user's) current hi streak. Streak resets if you don't use -hi for 12 hours.
 - \`-streakleader\` : Show the top users with the highest current hi streaks
 - \`-gamble <amount>\` : Bet your hi count for a 50/50 chance to double or lose the amount.
@@ -26,6 +26,7 @@ module.exports = {
 - **Hi Combo:** Multiple users using -hi in a short time triggers a HI COMBO!
 - **Hi Chain:** Use -hi quickly after someone else to build a chain and break records.
 - **Hi Transfer:** Use -hidonate to give your hi to someone else.
+- **Hi Duel:** Challenge another user to a hi duel. Use -hiduel @user to start, and -acceptduel to accept. Most -hi's in 1 minute wins. Bonus for 60+ hi's!
     `;
     message.channel.send(helpMessage);
   }

@@ -1,10 +1,11 @@
 const roasts = require('../roasts');
 const hiExileMessages = require('../hiExileMessages');
+const { hiDuels } = require('./acceptduel');
 
 module.exports = {
   name: 'hi',
   execute: async (message, args, context) => {
-    const { db, HI_STREAK_RESET, hiDuels, HI_CHAIN_WINDOW, HI_COMBO_WINDOW, FUNNY_EMOJIS, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS } = context;
+    const { db, HI_STREAK_RESET, HI_CHAIN_WINDOW, HI_COMBO_WINDOW, FUNNY_EMOJIS, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS } = context;
     const userId = message.author.id;
     const now = Date.now();
     // Block hi command in specific channels
