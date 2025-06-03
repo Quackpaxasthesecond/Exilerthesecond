@@ -1,8 +1,9 @@
 const { EmbedBuilder } = require('discord.js');
-const { hiDuels } = require('./acceptduel');
 
 // In-memory duel state (should be moved to a persistent store for production)
-hiDuels = {};
+// Only define hiDuels if not already set by another module
+if (!global.hiDuels) global.hiDuels = {};
+const hiDuels = global.hiDuels;
 
 module.exports = {
   name: 'hiduel',

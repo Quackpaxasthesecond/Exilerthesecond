@@ -1,5 +1,6 @@
 // In-memory duel state (should be moved to a persistent store for production)
-const hiDuels = require('./hiduel').hiDuels || {};
+if (!global.hiDuels) global.hiDuels = {};
+const hiDuels = global.hiDuels;
 
 module.exports = {
   name: 'acceptduel',
