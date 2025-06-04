@@ -200,7 +200,8 @@ client.on('messageCreate', async (message) => {
     const cmd = commands.get(command.slice(1));
     cmd.execute(message, args, {
       db, timers, client, checkCooldown, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS, confirmAction,
-      hiStreaks, HI_STREAK_RESET, hiDuels, hiState, HI_CHAIN_WINDOW, HI_COMBO_WINDOW, FUNNY_EMOJIS, gambleCooldowns
+      hiStreaks, HI_STREAK_RESET, hiDuels, hiState, HI_CHAIN_WINDOW, HI_COMBO_WINDOW, FUNNY_EMOJIS, gambleCooldowns,
+      hiZone: global.hiZone || (global.hiZone = {}) // pass hiZone state for HI ZONE
     });
     return;
   }
