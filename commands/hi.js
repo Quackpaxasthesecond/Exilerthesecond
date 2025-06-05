@@ -71,13 +71,9 @@ module.exports = {
     if (filtered.size === 0) return message.reply("you will die....");
     const randomMember = filtered.random();
     const roast = roasts[Math.floor(Math.random() * roasts.length)];
+    // Fix: Actually use RNG for roast/image, not just quotes
     if (roast.startsWith('http')) {
-      // 50% chance to send a roast text instead of image
-      if (Math.random() < 0.5) {
-        message.channel.send(`${randomMember.user.username} is a certified goober.`);
-      } else {
-        message.channel.send(roast);
-      }
+      message.channel.send(roast);
     } else if (roast.includes('{user}')) {
       message.channel.send(roast.replace('{user}', randomMember.user.username));
     } else {
