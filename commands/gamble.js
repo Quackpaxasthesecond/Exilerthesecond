@@ -49,6 +49,22 @@ module.exports = {
         await member.roles.remove(ROLE_IDS.uncle);
         await db.query('INSERT INTO exiles (issuer, target) VALUES ($1, $2)', [message.author.id, userId]);
         message.channel.send(`<@${userId}> has been exiled by the gambling gods!`);
+        // --- Auto unexile after 3 minutes ---
+        setTimeout(async () => {
+          const refreshed = await message.guild.members.fetch(userId).catch(() => null);
+          if (refreshed && refreshed.roles.cache.has(ROLE_IDS.exiled)) {
+            await refreshed.roles.remove(ROLE_IDS.exiled);
+            if (context.SPECIAL_MEMBERS && context.SPECIAL_MEMBERS.includes(refreshed.id)) {
+              await refreshed.roles.add(ROLE_IDS.uncle);
+              message.channel.send(`${refreshed.user.username} the unc has been automatically unexiled.`);
+            } else if (context.SWAGGER_MEMBERS && context.SWAGGER_MEMBERS.includes(refreshed.id)) {
+              await refreshed.roles.add(ROLE_IDS.swaggers);
+              message.channel.send(`${refreshed.user.username} the swagger has been automatically unexiled.`);
+            } else {
+              message.channel.send(`${refreshed.user.username} has been automatically unexiled.`);
+            }
+          }
+        }, 3 * 60 * 1000);
       } catch (err) {
         message.channel.send('Tried to exile you, but something went wrong.');
       }

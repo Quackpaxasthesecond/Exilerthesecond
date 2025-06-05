@@ -104,15 +104,4 @@ const QUESTS = [
 	}
 ];
 
-// Only export QUESTS and getQuestProgress from this file
-module.exports = {
-	QUESTS,
-	async getQuestProgress(db, userId) {
-		const progress = [];
-		for (const quest of QUESTS) {
-			const done = await quest.check(db, userId);
-			progress.push({ id: quest.id, desc: quest.desc, done });
-		}
-		return progress;
-	}
-};
+// Remove all export logic so this file is inert for now
