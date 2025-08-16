@@ -272,20 +272,44 @@ client.on('interactionCreate', async (interaction) => {
   if (interaction.channel && typeof interaction.channel.send === 'function') {
     messageLike.channel.send = interaction.channel.send.bind(interaction.channel);
   }
+  // Defer reply right away to avoid timeout while command runs
+  try {
+    if (!interaction.replied && !interaction.deferred) await interaction.deferReply({ ephemeral: true });
+  } catch (err) {
+    // ignore defer errors (e.g., if already replied)
+  }
 
+  // Create an interaction adapter that maps reply -> followUp when already deferred
+  const interactionAdapter = Object.create(interaction);
+  interactionAdapter.reply = async (payload) => {
+    if (!interaction.deferred && !interaction.replied) return interaction.reply(payload);
+    return interaction.followUp(payload);
+  };
+
+  let execError = null;
   try {
     // Prefer calling the command as message-based for backwards compatibility
     await cmd.execute(messageLike, args, commonContext);
   } catch (errMsgStyle) {
-    // If that fails, try calling the command with interaction-style signature
+    execError = errMsgStyle;
     try {
-      await cmd.execute(interaction, interaction.options, commonContext);
+      // Fallback to interaction-style execution using adapted interaction
+      await cmd.execute(interactionAdapter, interaction.options, commonContext);
+      execError = null;
     } catch (err) {
+      execError = err;
       console.error('Slash command execution failed (both message-style and interaction-style):', err);
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: 'There was an error executing this command.', ephemeral: true });
-      }
     }
+  }
+
+  // Ensure the deferred reply is resolved so Discord doesn't complain.
+  try {
+    if (interaction.deferred && !interaction.replied) {
+      // Edit the original deferred reply to signal completion (ephemeral)
+      await interaction.editReply({ content: execError ? 'There was an error executing this command.' : 'Command executed.' });
+    }
+  } catch (err) {
+    // ignore edit errors
   }
 });
 
