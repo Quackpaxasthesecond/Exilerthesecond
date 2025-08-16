@@ -279,13 +279,17 @@ client.on('interactionCreate', async (interaction) => {
           // Mirror the sent message into the deferred reply (so the interaction
           // shows the same embed/content) without creating an extra followUp.
           try {
-            const payloadToEdit = {};
-            if (sent && sent.content) payloadToEdit.content = sent.content;
-            if (sent && sent.embeds && sent.embeds.length) payloadToEdit.embeds = sent.embeds.map(e => e);
-            if (Object.keys(payloadToEdit).length > 0) {
-              if (payloadToEdit.content && payloadToEdit.content.length > 1900) payloadToEdit.content = payloadToEdit.content.slice(0, 1900) + '...';
-              await interaction.editReply(payloadToEdit);
-            }
+            // Instead of mirroring the whole embed (which duplicates the message),
+            // edit the deferred reply with a short acknowledgement and a link to the
+            // posted channel message so users can view it in-channel.
+            try {
+              if (sent && interaction.guild && sent.id) {
+                const link = `https://discord.com/channels/${interaction.guild.id}/${originalChannel.id}/${sent.id}`;
+                await interaction.editReply({ content: `Posted: ${link}` });
+              } else {
+                await interaction.editReply({ content: 'Posted to channel.' });
+              }
+            } catch (e) { /* ignore edit errors */ }
           } catch (e) { /* ignore edit errors */ }
           return sent;
         }
