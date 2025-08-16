@@ -244,13 +244,26 @@ client.on('interactionCreate', async (interaction) => {
     hiZone: global.hiZone || (global.hiZone = {})
   };
 
+  // Capture original channel helpers so we don't overwrite them
+  const originalChannel = interaction.channel;
+  const originalChannelSend = originalChannel && originalChannel.send ? originalChannel.send.bind(originalChannel) : null;
+  const originalAwaitMessages = originalChannel && originalChannel.awaitMessages ? originalChannel.awaitMessages.bind(originalChannel) : null;
+
   // Create a message-like adapter that routes replies to the interaction and
   // channel sends to the real channel while acknowledging the interaction.
   const messageLike = {
     author: interaction.user,
     member: interaction.member,
     guild: interaction.guild,
-    channel: interaction.channel,
+    // Provide a lightweight channel wrapper so we don't mutate Discord's Channel
+    channel: {
+      id: originalChannel ? originalChannel.id : null,
+      send: async (...p) => {
+        if (!originalChannelSend) throw new Error('No channel send available');
+        return originalChannelSend(...p);
+      },
+      awaitMessages: originalAwaitMessages,
+    },
     mentions: {
       members: { first: () => fetchedMember },
       users: { first: () => fetchedUser }
