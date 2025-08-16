@@ -224,8 +224,8 @@ client.on('interactionCreate', async (interaction) => {
     }
   }
 
-  // Defer immediately to avoid the application timeout
-  try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* ignore */ }
+  // Defer immediately to avoid the application timeout (public reply)
+  try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* ignore */ }
 
   // Pre-fetch the referenced user and member so message-style commands that do
   // synchronous `message.mentions.members.first()` keep working.
@@ -273,14 +273,14 @@ client.on('interactionCreate', async (interaction) => {
       // Route reply to the deferred interaction reply (editReply) or followUp
       try {
         const data = typeof payload === 'string' ? { content: payload } : payload;
-        // If we've deferred, edit the reply; otherwise reply normally
+        // If we've deferred, followUp; otherwise reply normally. Make public (non-ephemeral).
         if (interaction.deferred || interaction.replied) {
-          return interaction.followUp(Object.assign({}, data, { ephemeral: true }));
+          return interaction.followUp(Object.assign({}, data, { ephemeral: false }));
         }
-        return interaction.reply(Object.assign({}, data, { ephemeral: true }));
+        return interaction.reply(Object.assign({}, data, { ephemeral: false }));
       } catch (e) {
         // Fallback: send to channel
-        try { return interaction.channel.send(typeof payload === 'string' ? payload : payload); } catch (ee) { return null; }
+        try { return messageLike.channel.send(typeof payload === 'string' ? payload : payload); } catch (ee) { return null; }
       }
     }
   };
@@ -289,11 +289,19 @@ client.on('interactionCreate', async (interaction) => {
   // interaction reply is edited with an acknowledgement to avoid silence.
   if (interaction.channel && typeof interaction.channel.send === 'function') {
     messageLike.channel.send = async (payload) => {
-      const sent = await interaction.channel.send(typeof payload === 'string' ? payload : payload);
-      // Try to edit the deferred reply to reflect success. Keep it short.
+      const sent = await originalChannelSend(typeof payload === 'string' ? payload : payload);
+      // If the sent message contains embeds or content, mirror them into the interaction reply so
+      // the user who used the slash command sees the same embed publicly.
       try {
-        const ack = typeof payload === 'string' ? payload : (payload.content || 'Posted to channel.');
-        await interaction.editReply({ content: ack.length > 1900 ? ack.slice(0, 1900) + '...' : ack });
+        const payloadToEdit = {};
+        if (sent && sent.content) payloadToEdit.content = sent.content;
+        if (sent && sent.embeds && sent.embeds.length) payloadToEdit.embeds = sent.embeds.map(e => e);
+        // If we have something to show, edit the deferred reply to include it.
+        if (Object.keys(payloadToEdit).length > 0) {
+          // Ensure we don't exceed content limits
+          if (payloadToEdit.content && payloadToEdit.content.length > 1900) payloadToEdit.content = payloadToEdit.content.slice(0, 1900) + '...';
+          await interaction.editReply(payloadToEdit);
+        }
       } catch (e) {
         // ignore edit errors
       }
