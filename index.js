@@ -224,8 +224,8 @@ client.on('interactionCreate', async (interaction) => {
     }
   }
 
-  // Defer immediately to avoid the application timeout (public reply)
-  try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* ignore */ }
+  // Defer immediately to avoid the application timeout (ephemeral ack to invoker)
+  try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* ignore */ }
 
   // Pre-fetch the referenced user and member so message-style commands that do
   // synchronous `message.mentions.members.first()` keep working.
@@ -269,7 +269,7 @@ client.on('interactionCreate', async (interaction) => {
       users: { first: () => fetchedUser }
     },
     content: `/${interaction.commandName} ${args.join(' ')}`,
-    reply: async (payload) => {
+  reply: async (payload) => {
       // Prefer sending to the channel so output is public and avoid creating a
       // separate followUp message that duplicates the channel post.
       try {
@@ -285,6 +285,7 @@ client.on('interactionCreate', async (interaction) => {
             try {
               if (sent && interaction.guild && sent.id) {
                 const link = `https://discord.com/channels/${interaction.guild.id}/${originalChannel.id}/${sent.id}`;
+                // Edit ephemeral reply so only the command user sees the acknowledgement
                 await interaction.editReply({ content: `Posted: ${link}` });
               } else {
                 await interaction.editReply({ content: 'Posted to channel.' });
