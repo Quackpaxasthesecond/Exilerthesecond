@@ -231,6 +231,9 @@ client.on('interactionCreate', async (interaction) => {
     }
   }
 
+  // Capture the first message sent by the command (if any)
+  let lastSent = null;
+
   // Create a message-like adapter so existing command code keeps working
   const messageLike = {
     author: interaction.user,
@@ -254,23 +257,39 @@ client.on('interactionCreate', async (interaction) => {
     },
     // Provide content for potential uses
     content: `/${interaction.commandName} ${args.join(' ')}`,
-    // reply should delegate to interaction reply/followUp
+    // reply should delegate to interaction reply/followUp and capture output
     reply: async (payload) => {
       try {
+        let sent;
         if (!interaction.replied && !interaction.deferred) {
-          return interaction.reply(typeof payload === 'string' ? { content: payload } : payload);
+          sent = await interaction.reply(typeof payload === 'string' ? { content: payload } : payload);
+          // reply() returns void or a message; we can't always capture, so leave lastSent as null
+        } else {
+          sent = await interaction.followUp(typeof payload === 'string' ? { content: payload } : payload);
+          lastSent = sent || lastSent;
         }
-        return interaction.followUp(typeof payload === 'string' ? { content: payload } : payload);
+        return sent;
       } catch (err) {
-        // last-resort: send in channel
-        return interaction.channel.send(typeof payload === 'string' ? payload : (payload.content || JSON.stringify(payload)));
+        // last-resort: send in channel and capture
+        try {
+          const sent = await interaction.channel.send(typeof payload === 'string' ? payload : (payload.content || JSON.stringify(payload)));
+          lastSent = sent || lastSent;
+          return sent;
+        } catch (errSend) {
+          return null;
+        }
       }
     }
   };
 
   // Ensure channel.send and awaitMessages (used by confirmAction) are available
   if (interaction.channel && typeof interaction.channel.send === 'function') {
-    messageLike.channel.send = interaction.channel.send.bind(interaction.channel);
+    // Wrap channel.send to capture the sent message
+    messageLike.channel.send = async (payload) => {
+      const sent = await interaction.channel.send(typeof payload === 'string' ? payload : payload);
+      lastSent = sent || lastSent;
+      return sent;
+    };
   }
   // Defer reply right away to avoid timeout while command runs
   try {
@@ -305,11 +324,29 @@ client.on('interactionCreate', async (interaction) => {
   // Ensure the deferred reply is resolved so Discord doesn't complain.
   try {
     if (interaction.deferred && !interaction.replied) {
-      // Edit the original deferred reply to signal completion (ephemeral)
-      await interaction.editReply({ content: execError ? 'There was an error executing this command.' : 'Command executed.' });
+      if (execError) {
+        await interaction.editReply({ content: 'There was an error executing this command.' });
+      } else if (lastSent) {
+        // If the command already sent a message to the channel, try to mirror its content in the interaction reply
+        const payload = {};
+        if (lastSent.content) payload.content = lastSent.content;
+        if (lastSent.embeds && lastSent.embeds.length) payload.embeds = lastSent.embeds.map(e => e);
+        try {
+          await interaction.editReply(payload);
+        } catch (errEdit) {
+          // If editing with the captured payload fails, delete the ephemeral reply so only the channel message remains
+          try { await interaction.deleteReply(); } catch (e) {}
+        }
+      } else {
+        // No sent message to mirror: delete the deferred reply to avoid a useless 'Command executed' message
+        try { await interaction.deleteReply(); } catch (e) {
+          // If delete fails, fallback to a short acknowledgement
+          try { await interaction.editReply({ content: 'Done.' }); } catch (ee) {}
+        }
+      }
     }
   } catch (err) {
-    // ignore edit errors
+    // ignore edit/delete errors
   }
 });
 
