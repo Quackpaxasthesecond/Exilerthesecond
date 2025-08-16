@@ -1,5 +1,8 @@
 module.exports = {
   name: 'help',
+  description: 'Show help for all commands',
+  slash: true,
+  options: [],
   execute: async (message, args, context) => {
     const { checkCooldown } = context;
     if (checkCooldown(message.author.id, 'help', message)) return;

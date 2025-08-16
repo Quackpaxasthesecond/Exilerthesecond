@@ -1,5 +1,15 @@
 module.exports = {
   name: 'checkhistreaks',
+  description: 'Check your (or another user’s) current hi streak',
+  slash: true,
+  options: [
+    {
+      name: 'user',
+      description: 'User to check streak for',
+      type: 6,
+      required: false
+    }
+  ],
   execute: async (message, args, context) => {
     const { hiStreaks } = context;
     const userId = message.mentions.users.first()?.id || message.author.id;

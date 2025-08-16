@@ -2,6 +2,9 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
   name: 'leaderboard',
+  description: 'Show the top exiled users',
+  slash: true,
+  options: [],
   execute: async (message, args, context) => {
     const { db, checkCooldown } = context;
     if (checkCooldown(message.author.id, '-leaderboard', message, message.member)) return;

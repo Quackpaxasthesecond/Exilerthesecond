@@ -1,5 +1,21 @@
 module.exports = {
   name: 'exile',
+  description: 'Exile a user (mods/admins only)',
+  slash: true,
+  options: [
+    {
+      name: 'user',
+      description: 'User to exile',
+      type: 6,
+      required: true
+    },
+    {
+      name: 'minutes',
+      description: 'Duration in minutes',
+      type: 4,
+      required: false
+    }
+  ],
   execute: async (message, args, context) => {
     const { db, timers, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS, checkCooldown } = context;
     if (checkCooldown(message.author.id, '-exile', message, message.member)) return;

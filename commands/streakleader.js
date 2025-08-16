@@ -2,6 +2,9 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
   name: 'streakleader',
+  description: 'Show the top users with the highest current hi streaks',
+  slash: true,
+  options: [],
   execute: async (message, args, context) => {
     const { hiStreaks } = context;
     // Build a leaderboard of top hi streaks (current, not all-time)

@@ -2,6 +2,9 @@ const { getQuestProgress } = require('./quests');
 
 module.exports = {
   name: 'quests',
+  description: 'Show your daily quests progress',
+  slash: true,
+  options: [],
   execute: async (message, args, context) => {
     const { db } = context;
     const userId = message.author.id;

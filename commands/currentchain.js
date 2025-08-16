@@ -1,5 +1,8 @@
 module.exports = {
   name: 'currentchain',
+  description: 'Show the current and record hi chain for the server',
+  slash: true,
+  options: [],
   execute: async (message, args, context) => {
     const { db } = context;
     const guildId = message.guild.id;

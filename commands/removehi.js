@@ -1,5 +1,21 @@
 module.exports = {
   name: 'removehi',
+  description: 'Remove hi from a user (owner only)',
+  slash: true,
+  options: [
+    {
+      name: 'user',
+      description: 'User to remove hi from',
+      type: 6,
+      required: true
+    },
+    {
+      name: 'amount',
+      description: 'Amount of hi to remove',
+      type: 4,
+      required: true
+    }
+  ],
   execute: async (message, args, context) => {
     const { db, checkCooldown, confirmAction } = context;
     if (checkCooldown(message.author.id, '-removehi', message, message.member)) return;

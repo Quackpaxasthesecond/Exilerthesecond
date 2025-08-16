@@ -1,5 +1,21 @@
 module.exports = {
   name: 'addexile',
+  description: 'Add exiles to a user (owner only)',
+  slash: true,
+  options: [
+    {
+      name: 'user',
+      description: 'User to add exiles to',
+      type: 6,
+      required: true
+    },
+    {
+      name: 'amount',
+      description: 'Number of exiles to add',
+      type: 4,
+      required: true
+    }
+  ],
   execute: async (message, args, context) => {
     const { db, checkCooldown } = context;
     if (checkCooldown(message.author.id, '-addexile', message, message.member)) return;

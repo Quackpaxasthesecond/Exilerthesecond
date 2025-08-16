@@ -2,6 +2,9 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
   name: 'hilb',
+  description: 'Show the top users who used -hi',
+  slash: true,
+  options: [],
   execute: async (message, args, context) => {
     const { db, checkCooldown } = context;
     if (checkCooldown(message.author.id, '-hileaderboard', message, message.member)) return;

@@ -1,5 +1,15 @@
 module.exports = {
   name: 'unexile',
+  description: 'Unexile a user (mods/admins only)',
+  slash: true,
+  options: [
+    {
+      name: 'user',
+      description: 'User to unexile',
+      type: 6, // USER
+      required: true
+    }
+  ],
   execute: async (message, args, context) => {
     const { db, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS, checkCooldown } = context;
     if (checkCooldown(message.author.id, '-unexile', message, message.member)) return;

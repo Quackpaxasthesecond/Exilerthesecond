@@ -52,6 +52,35 @@ const client = new Client({
   ],
 });
 
+// --- Slash Command Registration ---
+const { REST, Routes } = require('discord.js');
+const slashCommands = [];
+commands.forEach((cmd, name) => {
+  if (cmd.slash) {
+    slashCommands.push({
+      name: cmd.name,
+      description: cmd.description || 'No description provided',
+      options: cmd.options || [],
+    });
+  }
+});
+
+async function registerSlashCommands() {
+  if (!process.env.DISCORD_BOT_TOKEN || !process.env.DISCORD_CLIENT_ID) return;
+  const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN);
+  try {
+    await rest.put(
+      Routes.applicationCommands(process.env.DISCORD_CLIENT_ID),
+      { body: slashCommands }
+    );
+    console.log('Slash commands registered.');
+  } catch (err) {
+    console.error('Failed to register slash commands:', err);
+  }
+}
+
+registerSlashCommands();
+
 // --- Database Setup ---
 const db = new PgClient({ connectionString: process.env.POSTGRES_URL });
 db.connect().then(() => console.log('Connected to PostgreSQL database.')).catch(err => console.error('Postgres connection error:', err));
@@ -175,6 +204,23 @@ const hiDuels = {};
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
   client.user.setActivity('Exiling buddies.');
+});
+
+// --- Slash Command Handler ---
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
+  const cmd = commands.get(interaction.commandName);
+  if (!cmd || !cmd.slash) return;
+  try {
+    await cmd.execute(interaction, interaction.options, {
+      db, timers, client, checkCooldown, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS, confirmAction,
+      hiStreaks, HI_STREAK_RESET, hiDuels, hiState, HI_CHAIN_WINDOW, HI_COMBO_WINDOW, FUNNY_EMOJIS, gambleCooldowns,
+      hiZone: global.hiZone || (global.hiZone = {})
+    });
+  } catch (err) {
+    console.error('Slash command error:', err);
+    await interaction.reply({ content: 'There was an error executing this command.', ephemeral: true });
+  }
 });
 
 client.on('messageCreate', async (message) => {

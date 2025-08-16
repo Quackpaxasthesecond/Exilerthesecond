@@ -1,5 +1,15 @@
 module.exports = {
   name: 'resetleaderboard',
+  description: 'Reset a user’s leaderboard score (owner only)',
+  slash: true,
+  options: [
+    {
+      name: 'user',
+      description: 'User to reset leaderboard for',
+      type: 6,
+      required: true
+    }
+  ],
   execute: async (message, args, context) => {
     const { db, checkCooldown, confirmAction } = context;
     if (checkCooldown(message.author.id, '-resetleaderboard', message, message.member)) return;

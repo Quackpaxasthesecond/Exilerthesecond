@@ -1,5 +1,8 @@
 module.exports = {
   name: 'currenthi',
+  description: 'Show your current hi, streak, and chain',
+  slash: true,
+  options: [],
   execute: async (message, args, context) => {
     const { db } = context;
     const userId = message.author.id;

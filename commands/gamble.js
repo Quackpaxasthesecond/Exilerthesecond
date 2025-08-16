@@ -1,5 +1,15 @@
 module.exports = {
   name: 'gamble',
+  description: 'Bet your hi count for a 50/50 chance to double or lose the amount.',
+  slash: true,
+  options: [
+    {
+      name: 'amount',
+      description: 'Amount to gamble',
+      type: 4, // INTEGER
+      required: true
+    }
+  ],
   execute: async (message, args, context) => {
     const { db, gambleCooldowns, ROLE_IDS } = context;
     const userId = message.author.id;

@@ -1,5 +1,21 @@
 module.exports = {
   name: 'removeexile',
+  description: 'Remove exiles from a user (owner only)',
+  slash: true,
+  options: [
+    {
+      name: 'user',
+      description: 'User to remove exiles from',
+      type: 6,
+      required: true
+    },
+    {
+      name: 'amount',
+      description: 'Number of exiles to remove',
+      type: 4,
+      required: true
+    }
+  ],
   execute: async (message, args, context) => {
     const { db, checkCooldown, confirmAction } = context;
     if (checkCooldown(message.author.id, '-removeexile', message, message.member)) return;

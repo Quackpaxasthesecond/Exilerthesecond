@@ -1,5 +1,21 @@
 module.exports = {
   name: 'hidonate',
+  description: 'Donate your hi count to another user',
+  slash: true,
+  options: [
+    {
+      name: 'user',
+      description: 'User to donate hi to',
+      type: 6,
+      required: true
+    },
+    {
+      name: 'amount',
+      description: 'Amount of hi to donate',
+      type: 4,
+      required: true
+    }
+  ],
   execute: async (message, args, context) => {
     const { db } = context;
     if (args.length < 2) return message.reply('Usage: -hidonate @user <amount>');

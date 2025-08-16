@@ -4,6 +4,9 @@ const hiDuels = global.hiDuels;
 
 module.exports = {
   name: 'acceptduel',
+  description: 'Accept a HI DUEL challenge',
+  slash: true,
+  options: [],
   execute: async (message, args, context) => {
     const guildId = message.guild.id;
     const duel = hiDuels[guildId];

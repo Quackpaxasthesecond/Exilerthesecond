@@ -7,6 +7,16 @@ const hiDuels = global.hiDuels;
 
 module.exports = {
   name: 'hiduel',
+  description: 'Challenge someone to a HI DUEL',
+  slash: true,
+  options: [
+    {
+      name: 'user',
+      description: 'User to challenge',
+      type: 6,
+      required: true
+    }
+  ],
   execute: async (message, args, context) => {
     const { db } = context;
     const challenger = message.author;

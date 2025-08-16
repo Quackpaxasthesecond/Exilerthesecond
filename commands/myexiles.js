@@ -1,5 +1,8 @@
 module.exports = {
   name: 'myexiles',
+  description: 'Show how many people you exiled (mods/admins only)',
+  slash: true,
+  options: [],
   execute: async (message, args, context) => {
     const { db, ROLE_IDS, checkCooldown } = context;
     if (checkCooldown(message.author.id, '-myexiles', message, message.member)) return;
