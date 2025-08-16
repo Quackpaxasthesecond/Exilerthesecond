@@ -206,11 +206,37 @@ client.once('ready', () => {
   client.user.setActivity('Exiling buddies.');
 });
 
-// --- Slash Command Handler (adapter for existing message-based commands) ---
+// --- Slash Command Handler (safe adapter) ---
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   const cmd = commands.get(interaction.commandName);
   if (!cmd || !cmd.slash) return;
+
+  // Build args and find first USER option (if any)
+  const args = [];
+  let firstUserId = null;
+  for (const opt of interaction.options.data) {
+    if (opt.type === 6) {
+      firstUserId = opt.value;
+      args.push(`<@${opt.value}>`);
+    } else {
+      args.push(String(opt.value));
+    }
+  }
+
+  // Defer immediately to avoid the application timeout
+  try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* ignore */ }
+
+  // Pre-fetch the referenced user and member so message-style commands that do
+  // synchronous `message.mentions.members.first()` keep working.
+  let fetchedUser = null;
+  let fetchedMember = null;
+  if (firstUserId) {
+    try { fetchedUser = await interaction.client.users.fetch(firstUserId); } catch (e) { fetchedUser = null; }
+    if (interaction.guild) {
+      try { fetchedMember = await interaction.guild.members.fetch(firstUserId); } catch (e) { fetchedMember = null; }
+    }
+  }
 
   const commonContext = {
     db, timers, client, checkCooldown, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS, confirmAction,
@@ -218,135 +244,61 @@ client.on('interactionCreate', async (interaction) => {
     hiZone: global.hiZone || (global.hiZone = {})
   };
 
-  // Build args array and capture first user mention (if any)
-  const args = [];
-  let firstMentionId = null;
-  for (const opt of interaction.options.data) {
-    // For USER options, opt.value is the user id
-    if (opt.type === 6) {
-      firstMentionId = opt.value;
-      args.push(`<@${opt.value}>`);
-    } else {
-      args.push(String(opt.value));
-    }
-  }
-
-  // Capture the first message sent by the command (if any)
-  let lastSent = null;
-
-  // Create a message-like adapter so existing command code keeps working
+  // Create a message-like adapter that routes replies to the interaction and
+  // channel sends to the real channel while acknowledging the interaction.
   const messageLike = {
     author: interaction.user,
     member: interaction.member,
     guild: interaction.guild,
     channel: interaction.channel,
-    // Build a simple mentions helper used by many commands
     mentions: {
-      members: {
-        first: () => {
-          if (!firstMentionId || !interaction.guild) return null;
-          return interaction.guild.members.cache.get(firstMentionId) || null;
-        }
-      },
-      users: {
-        first: () => {
-          if (!firstMentionId) return null;
-          return interaction.client.users.cache.get(firstMentionId) || null;
-        }
-      }
+      members: { first: () => fetchedMember },
+      users: { first: () => fetchedUser }
     },
-    // Provide content for potential uses
     content: `/${interaction.commandName} ${args.join(' ')}`,
-    // reply should delegate to interaction reply/followUp and capture output
     reply: async (payload) => {
+      // Route reply to the deferred interaction reply (editReply) or followUp
       try {
-        let sent;
-        if (!interaction.replied && !interaction.deferred) {
-          sent = await interaction.reply(typeof payload === 'string' ? { content: payload } : payload);
-          // reply() returns void or a message; we can't always capture, so leave lastSent as null
-        } else {
-          sent = await interaction.followUp(typeof payload === 'string' ? { content: payload } : payload);
-          lastSent = sent || lastSent;
+        const data = typeof payload === 'string' ? { content: payload } : payload;
+        // If we've deferred, edit the reply; otherwise reply normally
+        if (interaction.deferred || interaction.replied) {
+          return interaction.followUp(Object.assign({}, data, { ephemeral: true }));
         }
-        return sent;
-      } catch (err) {
-        // last-resort: send in channel and capture
-        try {
-          const sent = await interaction.channel.send(typeof payload === 'string' ? payload : (payload.content || JSON.stringify(payload)));
-          lastSent = sent || lastSent;
-          return sent;
-        } catch (errSend) {
-          return null;
-        }
+        return interaction.reply(Object.assign({}, data, { ephemeral: true }));
+      } catch (e) {
+        // Fallback: send to channel
+        try { return interaction.channel.send(typeof payload === 'string' ? payload : payload); } catch (ee) { return null; }
       }
     }
   };
 
-  // Ensure channel.send and awaitMessages (used by confirmAction) are available
+  // Wrap channel.send so channel messages still go to the channel, and the
+  // interaction reply is edited with an acknowledgement to avoid silence.
   if (interaction.channel && typeof interaction.channel.send === 'function') {
-    // Wrap channel.send to capture the sent message
     messageLike.channel.send = async (payload) => {
       const sent = await interaction.channel.send(typeof payload === 'string' ? payload : payload);
-      lastSent = sent || lastSent;
+      // Try to edit the deferred reply to reflect success. Keep it short.
+      try {
+        const ack = typeof payload === 'string' ? payload : (payload.content || 'Posted to channel.');
+        await interaction.editReply({ content: ack.length > 1900 ? ack.slice(0, 1900) + '...' : ack });
+      } catch (e) {
+        // ignore edit errors
+      }
       return sent;
     };
   }
-  // Defer reply right away to avoid timeout while command runs
-  try {
-    if (!interaction.replied && !interaction.deferred) await interaction.deferReply({ ephemeral: true });
-  } catch (err) {
-    // ignore defer errors (e.g., if already replied)
-  }
 
-  // Create an interaction adapter that maps reply -> followUp when already deferred
-  const interactionAdapter = Object.create(interaction);
-  interactionAdapter.reply = async (payload) => {
-    if (!interaction.deferred && !interaction.replied) return interaction.reply(payload);
-    return interaction.followUp(payload);
-  };
-
-  let execError = null;
+  // Execute command: prefer message-style call for compatibility; fall back to
+  // interaction-style if the command expects it.
   try {
-    // Prefer calling the command as message-based for backwards compatibility
     await cmd.execute(messageLike, args, commonContext);
-  } catch (errMsgStyle) {
-    execError = errMsgStyle;
-    try {
-      // Fallback to interaction-style execution using adapted interaction
-      await cmd.execute(interactionAdapter, interaction.options, commonContext);
-      execError = null;
-    } catch (err) {
-      execError = err;
-      console.error('Slash command execution failed (both message-style and interaction-style):', err);
-    }
-  }
-
-  // Ensure the deferred reply is resolved so Discord doesn't complain.
-  try {
-    if (interaction.deferred && !interaction.replied) {
-      if (execError) {
-        await interaction.editReply({ content: 'There was an error executing this command.' });
-      } else if (lastSent) {
-        // If the command already sent a message to the channel, try to mirror its content in the interaction reply
-        const payload = {};
-        if (lastSent.content) payload.content = lastSent.content;
-        if (lastSent.embeds && lastSent.embeds.length) payload.embeds = lastSent.embeds.map(e => e);
-        try {
-          await interaction.editReply(payload);
-        } catch (errEdit) {
-          // If editing with the captured payload fails, delete the ephemeral reply so only the channel message remains
-          try { await interaction.deleteReply(); } catch (e) {}
-        }
-      } else {
-        // No sent message to mirror: delete the deferred reply to avoid a useless 'Command executed' message
-        try { await interaction.deleteReply(); } catch (e) {
-          // If delete fails, fallback to a short acknowledgement
-          try { await interaction.editReply({ content: 'Done.' }); } catch (ee) {}
-        }
-      }
-    }
   } catch (err) {
-    // ignore edit/delete errors
+    try {
+      await cmd.execute(interaction, interaction.options, commonContext);
+    } catch (err2) {
+      console.error('Slash command error:', err2);
+      try { await interaction.editReply({ content: 'There was an error executing this command.' }); } catch (e) { try { await interaction.reply({ content: 'There was an error executing this command.', ephemeral: true }); } catch (ee) {} }
+    }
   }
 });
 
