@@ -200,6 +200,9 @@ const HI_STREAK_RESET = 6 * 60 * 60 * 1000; // 6 hours in ms
 const hiDuels = {};
 // hiDuels: { [guildId]: { challengerId, opponentId, accepted, startTime, endTime, scores: { [userId]: count } } }
 
+// Guard to prevent processing the same interaction twice
+const processedInteractions = new Set();
+
 // --- Event Handlers ---
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
@@ -211,6 +214,15 @@ client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   const cmd = commands.get(interaction.commandName);
   if (!cmd || !cmd.slash) return;
+
+  // Skip duplicate processing of the same interaction id
+  if (processedInteractions.has(interaction.id)) {
+    console.log(`[slash] duplicate interaction ignored: ${interaction.id} ${interaction.commandName}`);
+    return;
+  }
+  processedInteractions.add(interaction.id);
+  // cleanup after 30s
+  setTimeout(() => processedInteractions.delete(interaction.id), 30 * 1000);
 
   // Build args and find first USER option (if any)
   const args = [];
