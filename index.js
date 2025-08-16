@@ -206,20 +206,86 @@ client.once('ready', () => {
   client.user.setActivity('Exiling buddies.');
 });
 
-// --- Slash Command Handler ---
+// --- Slash Command Handler (adapter for existing message-based commands) ---
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   const cmd = commands.get(interaction.commandName);
   if (!cmd || !cmd.slash) return;
+
+  const commonContext = {
+    db, timers, client, checkCooldown, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS, confirmAction,
+    hiStreaks, HI_STREAK_RESET, hiDuels, hiState, HI_CHAIN_WINDOW, HI_COMBO_WINDOW, FUNNY_EMOJIS, gambleCooldowns,
+    hiZone: global.hiZone || (global.hiZone = {})
+  };
+
+  // Build args array and capture first user mention (if any)
+  const args = [];
+  let firstMentionId = null;
+  for (const opt of interaction.options.data) {
+    // For USER options, opt.value is the user id
+    if (opt.type === 6) {
+      firstMentionId = opt.value;
+      args.push(`<@${opt.value}>`);
+    } else {
+      args.push(String(opt.value));
+    }
+  }
+
+  // Create a message-like adapter so existing command code keeps working
+  const messageLike = {
+    author: interaction.user,
+    member: interaction.member,
+    guild: interaction.guild,
+    channel: interaction.channel,
+    // Build a simple mentions helper used by many commands
+    mentions: {
+      members: {
+        first: () => {
+          if (!firstMentionId || !interaction.guild) return null;
+          return interaction.guild.members.cache.get(firstMentionId) || null;
+        }
+      },
+      users: {
+        first: () => {
+          if (!firstMentionId) return null;
+          return interaction.client.users.cache.get(firstMentionId) || null;
+        }
+      }
+    },
+    // Provide content for potential uses
+    content: `/${interaction.commandName} ${args.join(' ')}`,
+    // reply should delegate to interaction reply/followUp
+    reply: async (payload) => {
+      try {
+        if (!interaction.replied && !interaction.deferred) {
+          return interaction.reply(typeof payload === 'string' ? { content: payload } : payload);
+        }
+        return interaction.followUp(typeof payload === 'string' ? { content: payload } : payload);
+      } catch (err) {
+        // last-resort: send in channel
+        return interaction.channel.send(typeof payload === 'string' ? payload : (payload.content || JSON.stringify(payload)));
+      }
+    }
+  };
+
+  // Ensure channel.send and awaitMessages (used by confirmAction) are available
+  if (interaction.channel && typeof interaction.channel.send === 'function') {
+    messageLike.channel.send = interaction.channel.send.bind(interaction.channel);
+  }
+
   try {
-    await cmd.execute(interaction, interaction.options, {
-      db, timers, client, checkCooldown, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS, confirmAction,
-      hiStreaks, HI_STREAK_RESET, hiDuels, hiState, HI_CHAIN_WINDOW, HI_COMBO_WINDOW, FUNNY_EMOJIS, gambleCooldowns,
-      hiZone: global.hiZone || (global.hiZone = {})
-    });
-  } catch (err) {
-    console.error('Slash command error:', err);
-    await interaction.reply({ content: 'There was an error executing this command.', ephemeral: true });
+    // Prefer calling the command as message-based for backwards compatibility
+    await cmd.execute(messageLike, args, commonContext);
+  } catch (errMsgStyle) {
+    // If that fails, try calling the command with interaction-style signature
+    try {
+      await cmd.execute(interaction, interaction.options, commonContext);
+    } catch (err) {
+      console.error('Slash command execution failed (both message-style and interaction-style):', err);
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: 'There was an error executing this command.', ephemeral: true });
+      }
+    }
   }
 });
 
