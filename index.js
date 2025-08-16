@@ -359,14 +359,18 @@ client.on('messageCreate', async (message) => {
   const command = args.shift().toLowerCase();
 
   // --- Modular Commands ---
-  if (commands.has(command.slice(1))) {
-    const cmd = commands.get(command.slice(1));
-    cmd.execute(message, args, {
-      db, timers, client, checkCooldown, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS, confirmAction,
-      hiStreaks, HI_STREAK_RESET, hiDuels, hiState, HI_CHAIN_WINDOW, HI_COMBO_WINDOW, FUNNY_EMOJIS, gambleCooldowns,
-      hiZone: global.hiZone || (global.hiZone = {}) // pass hiZone state for HI ZONE
-    });
-    return;
+  // Only treat messages starting with the '-' prefix as bot commands
+  if (command.startsWith('-')) {
+    const cmdName = command.slice(1);
+    if (commands.has(cmdName)) {
+      const cmd = commands.get(cmdName);
+      cmd.execute(message, args, {
+        db, timers, client, checkCooldown, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS, confirmAction,
+        hiStreaks, HI_STREAK_RESET, hiDuels, hiState, HI_CHAIN_WINDOW, HI_COMBO_WINDOW, FUNNY_EMOJIS, gambleCooldowns,
+        hiZone: global.hiZone || (global.hiZone = {}) // pass hiZone state for HI ZONE
+      });
+      return;
+    }
   }
 });
 
