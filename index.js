@@ -270,16 +270,33 @@ client.on('interactionCreate', async (interaction) => {
     },
     content: `/${interaction.commandName} ${args.join(' ')}`,
     reply: async (payload) => {
-      // Route reply to the deferred interaction reply (editReply) or followUp
+      // Prefer sending to the channel so output is public and avoid creating a
+      // separate followUp message that duplicates the channel post.
       try {
-        const data = typeof payload === 'string' ? { content: payload } : payload;
-        // If we've deferred, followUp; otherwise reply normally. Make public (non-ephemeral).
+        const toSend = typeof payload === 'string' ? { content: payload } : payload;
+        if (originalChannelSend) {
+          const sent = await originalChannelSend(typeof payload === 'string' ? payload : payload);
+          // Mirror the sent message into the deferred reply (so the interaction
+          // shows the same embed/content) without creating an extra followUp.
+          try {
+            const payloadToEdit = {};
+            if (sent && sent.content) payloadToEdit.content = sent.content;
+            if (sent && sent.embeds && sent.embeds.length) payloadToEdit.embeds = sent.embeds.map(e => e);
+            if (Object.keys(payloadToEdit).length > 0) {
+              if (payloadToEdit.content && payloadToEdit.content.length > 1900) payloadToEdit.content = payloadToEdit.content.slice(0, 1900) + '...';
+              await interaction.editReply(payloadToEdit);
+            }
+          } catch (e) { /* ignore edit errors */ }
+          return sent;
+        }
+        // Fallback to interaction reply if no channel send available
+        const data = toSend;
         if (interaction.deferred || interaction.replied) {
           return interaction.followUp(Object.assign({}, data, { ephemeral: false }));
         }
         return interaction.reply(Object.assign({}, data, { ephemeral: false }));
       } catch (e) {
-        // Fallback: send to channel
+        // Final fallback: send to channel wrapper
         try { return messageLike.channel.send(typeof payload === 'string' ? payload : payload); } catch (ee) { return null; }
       }
     }
