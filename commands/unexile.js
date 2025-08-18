@@ -12,15 +12,28 @@ module.exports = {
   ],
   execute: async (message, args, context) => {
     const { db, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS, checkCooldown } = context;
+    const isInteraction = typeof message?.isChatInputCommand === 'function' && message.isChatInputCommand();
     if (checkCooldown(message.author.id, '-unexile', message, message.member)) return;
     if (
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
       message.guild.ownerId !== message.author.id
-    ) return message.reply("nice try buddy");
+    ) {
+      const text = "nice try buddy";
+      // public even for interactions
+      return message.reply(text);
+    }
     const target = message.mentions.members.first();
-    if (!target) return message.reply('Please mention a valid user to unexile.');
-    if (!target.roles.cache.has(ROLE_IDS.exiled)) return message.reply(`${target.user.username} is not exiled!`);
+    if (!target) {
+      const text = 'Please mention a valid user to unexile.';
+      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      return message.reply(text);
+    }
+    if (!target.roles.cache.has(ROLE_IDS.exiled)) {
+      const text = `${target.user.username} is not exiled!`;
+      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      return message.reply(text);
+    }
     try {
       await target.roles.remove(ROLE_IDS.exiled);
       const isUncle = SPECIAL_MEMBERS.includes(target.id);
@@ -39,7 +52,9 @@ module.exports = {
       }
     } catch (err) {
       console.error(err);
-      message.reply('An error occurred while trying to unexile the user.');
+      const text = 'An error occurred while trying to unexile the user.';
+      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      return message.reply(text);
     }
   }
 };

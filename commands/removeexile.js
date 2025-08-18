@@ -18,17 +18,26 @@ module.exports = {
   ],
   execute: async (message, args, context) => {
     const { db, checkCooldown, confirmAction } = context;
+    const isInteraction = typeof message?.isChatInputCommand === 'function' && message.isChatInputCommand();
     if (checkCooldown(message.author.id, '-removeexile', message, message.member)) return;
-    if (message.guild.ownerId !== message.author.id) {
-      return message.reply("Only the server owner can modify leaderboard records.");
+    if (message.guild.ownerId !== (message.author?.id || message.user?.id)) {
+      const text = "Only the server owner can modify leaderboard records.";
+      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      return message.reply(text);
     }
     const target = message.mentions.members.first();
     const amount = parseInt(args[1], 10);
     if (!target || isNaN(amount) || amount <= 0) {
-      return message.reply("Usage: `-removeexile @user <positive number>`");
+      const text = "Usage: `-removeexile @user <positive number>`";
+      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      return message.reply(text);
     }
     const confirmed = await confirmAction(message, `Type \`yes\` to remove up to ${amount} exiles for ${target.user.username}.`);
-    if (!confirmed) return message.channel.send('Action cancelled.');
+    if (!confirmed) {
+      const text = 'Action cancelled.';
+      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      return message.channel.send(text);
+    }
     try {
       await db.query(
         `DELETE FROM exiles WHERE id IN (
@@ -36,10 +45,14 @@ module.exports = {
         )`,
         [target.id, amount]
       );
-      message.channel.send(`Removed up to ${amount} exile${amount > 1 ? 's' : ''} for ${target.user.username}.`);
+      const text = `Removed up to ${amount} exile${amount > 1 ? 's' : ''} for ${target.user.username}.`;
+      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      return message.channel.send(text);
     } catch (err) {
       console.error(err);
-      message.reply('Error removing exile entries.');
+      const text = 'Error removing exile entries.';
+      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      return message.reply(text);
     }
   }
 };

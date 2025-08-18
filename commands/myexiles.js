@@ -5,13 +5,16 @@ module.exports = {
   options: [],
   execute: async (message, args, context) => {
     const { db, ROLE_IDS, checkCooldown } = context;
+    const isInteraction = typeof message?.isChatInputCommand === 'function' && message.isChatInputCommand();
     if (checkCooldown(message.author.id, '-myexiles', message, message.member)) return;
     if (
       !message.member.roles.cache.has(ROLE_IDS.mod) &&
       !message.member.roles.cache.has(ROLE_IDS.admin) &&
       message.guild.ownerId !== message.author.id
     ) {
-      return message.reply("buddy you are not a moderator. slow down 😅😅😅");
+      const text = "buddy you are not a moderator. slow down 😅😅😅";
+      // Keep this message public even for slash invocations (mods/admins only command)
+      return message.reply(text);
     }
     try {
       const res = await db.query(
@@ -19,10 +22,14 @@ module.exports = {
         [message.author.id]
       );
       const count = res.rows[0].count;
-      message.reply(`you've murdered ${count} people.`);
+      const text = `you've murdered ${count} people.`;
+      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      return message.reply(text);
     } catch (err) {
       console.error(err);
-      message.reply('Error checking your exile record.');
+      const text = 'Error checking your exile record.';
+      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      return message.reply(text);
     }
   }
 };

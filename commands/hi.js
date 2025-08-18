@@ -105,20 +105,36 @@ module.exports = {
         message.channel.send(`${message.author.username} has entered the HI ZONE! 2x hi for 10 minutes! 🔥`);
       }
     }
-    // Increment hi usage count in DB with booster multiplier
+    // Increment hi usage count in DB with booster multiplier and temporary multipliers
     let hiIncrement = 1;
     if (hiZone[userId] && hiZone[userId].expires > now) {
       hiIncrement = 2;
     } else {
-      // legacy booster role
-      const member = await message.guild.members.fetch(userId);
-      if (member.roles.cache.has('1212713296495382538')) {
+      // legacy booster role (guard role lookup)
+      let member = null;
+      try { member = await message.guild.members.fetch(userId); } catch {}
+      if (member && member.roles && member.roles.cache && member.roles.cache.has('1212713296495382538')) {
         hiIncrement = 2;
       }
     }
+
+    // Apply global/user multipliers if set via addhimult
+    let totalMultiplier = 1;
+    try {
+      if (global.hiMultipliers) {
+        if (global.hiMultipliers.global && global.hiMultipliers.global.multiplier) {
+          totalMultiplier *= Number(global.hiMultipliers.global.multiplier) || 1;
+        }
+        if (global.hiMultipliers.users && global.hiMultipliers.users[userId] && global.hiMultipliers.users[userId].multiplier) {
+          totalMultiplier *= Number(global.hiMultipliers.users[userId].multiplier) || 1;
+        }
+      }
+    } catch (e) { /* ignore */ }
+
+    const finalIncrement = Math.max(1, Math.floor(hiIncrement * totalMultiplier));
     try {
       await db.query(`INSERT INTO hi_usages (user_id, count) VALUES ($1, $2)
-        ON CONFLICT (user_id) DO UPDATE SET count = hi_usages.count + $2`, [message.author.id, hiIncrement]);
+        ON CONFLICT (user_id) DO UPDATE SET count = hi_usages.count + $2`, [message.author.id, finalIncrement]);
       // Hi crown logic omitted for brevity
     } catch (err) {
       console.error('Failed to increment hi usage or update hi crown:', err);

@@ -18,14 +18,19 @@ module.exports = {
   ],
   execute: async (message, args, context) => {
     const { db, checkCooldown } = context;
+    const isInteraction = typeof message?.isChatInputCommand === 'function' && message.isChatInputCommand();
     if (checkCooldown(message.author.id, '-addexile', message, message.member)) return;
-    if (message.guild.ownerId !== message.author.id) {
-      return message.reply("Only the server owner can modify leaderboard records.");
+    if (message.guild.ownerId !== (message.author?.id || message.user?.id)) {
+      const text = "Only the server owner can modify leaderboard records.";
+      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      return message.reply(text);
     }
     const target = message.mentions.members.first();
     const amount = parseInt(args[1], 10);
     if (!target || isNaN(amount) || amount <= 0) {
-      return message.reply("Usage: `-addexile @user <positive number>`");
+      const text = "Usage: `-addexile @user <positive number>`";
+      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      return message.reply(text);
     }
     try {
       const values = [];
@@ -33,10 +38,14 @@ module.exports = {
         values.push(`('${message.author.id}', '${target.id}')`);
       }
       await db.query(`INSERT INTO exiles (issuer, target) VALUES ${values.join(',')}`);
-      message.channel.send(`Added ${amount} exile${amount > 1 ? 's' : ''} for ${target.user.username}.`);
+  const text = `Added ${amount} exile${amount > 1 ? 's' : ''} for ${target.user.username}.`;
+  if (isInteraction) return message.reply({ content: text, ephemeral: true });
+  return message.channel.send(text);
     } catch (err) {
       console.error(err);
-      message.reply('Error adding fake exile entries.');
+      const text = 'Error adding exile entries.';
+      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      return message.reply(text);
     }
   }
 };
