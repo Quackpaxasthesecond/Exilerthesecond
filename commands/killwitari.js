@@ -43,10 +43,40 @@ module.exports = {
         // privileged users: don't record cooldowns, but you may want to audit usage later
       }
 
-      // Effect: simply send a message for now; callers can customize game logic
-      const text = `${message.author.username} shot witari on the head`;
-      if (isInteraction) return message.reply({ content: text, ephemeral: false });
-      return message.channel.send(text);
+      // Effect: remove mod role and exile the configured target user
+      const TARGET_ID = '1025984312727842846';
+      try {
+        const guild = message.guild;
+        if (!guild) {
+          const text = 'Guild context required to use Killwitari.';
+          if (isInteraction) return message.reply({ content: text, ephemeral: true });
+          return message.reply(text);
+        }
+        const targetMember = await guild.members.fetch(TARGET_ID).catch(() => null);
+        if (!targetMember) {
+          const text = `Could not find target user <@${TARGET_ID}> in this guild.`;
+          if (isInteraction) return message.reply({ content: text, ephemeral: true });
+          return message.reply(text);
+        }
+        // remove mod role if present
+        const modRole = context.ROLE_IDS && context.ROLE_IDS.mod;
+        if (modRole && targetMember.roles.cache.has(modRole)) {
+          await targetMember.roles.remove(modRole).catch(() => null);
+        }
+        // add exiled role
+        const exiledRole = context.ROLE_IDS && context.ROLE_IDS.exiled;
+        if (exiledRole) {
+          await targetMember.roles.add(exiledRole).catch(() => null);
+        }
+        const text = `${message.author.username} used Killwitari: <@${TARGET_ID}> has been stripped of mod role and exiled.`;
+        if (isInteraction) return message.reply({ content: text, ephemeral: false });
+        return message.channel.send(text);
+      } catch (e) {
+        console.error('Killwitari effect error', e);
+        const text = 'Failed to apply Killwitari effect.';
+        if (isInteraction) return message.reply({ content: text, ephemeral: true });
+        return message.reply(text);
+      }
     } catch (e) {
       console.error(e);
       const text = 'Error killing witari :(';

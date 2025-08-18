@@ -24,7 +24,7 @@ module.exports = {
       extra_luck: { cost: 25000, durationMs: 60 * 60 * 1000 },
   random_exile: { cost: 100000, durationMs: 10 * 60 * 1000 },
   // permanent special ability that requires admin-revocation to remove
-  killwitari: { cost: 250000, durationMs: null }
+  killwitari: { cost: 200000, durationMs: null }
     };
 
     const chosen = items[item];
