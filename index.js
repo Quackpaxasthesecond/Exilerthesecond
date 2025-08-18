@@ -34,6 +34,16 @@ fs.readdirSync('./commands').filter(f => f.endsWith('.js')).forEach(file => {
   commands.set(command.name, command);
 });
 
+// Apply defaults: make all commands (except -hi) use public slash replies and
+// avoid posting to the channel for slash invocations. This central change
+// prevents editing every individual file.
+commands.forEach((cmd, name) => {
+  if (name === 'hi') return; // keep -hi prefix-only and unchanged
+  // set defaults if not explicitly provided
+  if (cmd.publicSlash === undefined) cmd.publicSlash = true;
+  if (cmd.postToChannel === undefined) cmd.postToChannel = false;
+});
+
 // --- HTTP Server for Uptime ---
 http.createServer((req, res) => {
   res.writeHead(200);
@@ -406,6 +416,23 @@ client.on('interactionCreate', async (interaction) => {
 
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
+
+  // Wrap message.reply to avoid pinging the user by default when prefix commands reply.
+  if (!message._replyWrapped) {
+    const origReply = message.reply.bind(message);
+    message.reply = async (contentOrOptions) => {
+      // If caller passed explicit allowedMentions, respect it. Otherwise disable repliedUser.
+      if (contentOrOptions && typeof contentOrOptions === 'object' && contentOrOptions.allowedMentions) {
+        return origReply(contentOrOptions);
+      }
+      if (typeof contentOrOptions === 'string') {
+        return origReply({ content: contentOrOptions, allowedMentions: { repliedUser: false } });
+      }
+      // object payload
+      return origReply(Object.assign({}, contentOrOptions || {}, { allowedMentions: Object.assign({}, contentOrOptions?.allowedMentions || {}, { repliedUser: false }) }));
+    };
+    message._replyWrapped = true;
+  }
 
   // --- Block -hi and related commands in specific channel ---
   const HI_BLOCKED_CHANNEL = '1208809645205094481';
