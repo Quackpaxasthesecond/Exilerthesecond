@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ApplicationCommandOptionType } = require('discord.js');
 const { Client: PgClient } = require('pg');
 require('dotenv').config();
 const http = require('http');
@@ -55,15 +55,29 @@ const client = new Client({
 // --- Slash Command Registration ---
 const { REST, Routes } = require('discord.js');
 const slashCommands = [];
+// Map numeric option types (legacy) to Discord.js enums for safety
+const optionTypeMap = {
+  3: ApplicationCommandOptionType.String,
+  4: ApplicationCommandOptionType.Integer,
+  6: ApplicationCommandOptionType.User,
+};
 commands.forEach((cmd, name) => {
   if (cmd.slash) {
-    slashCommands.push({
-      name: cmd.name,
-      description: cmd.description || 'No description provided',
-      options: cmd.options || [],
+    const opts = (cmd.options || []).map(o => {
+      if (o && typeof o.type === 'number' && optionTypeMap[o.type]) {
+        return Object.assign({}, o, { type: optionTypeMap[o.type] });
+      }
+      return o;
     });
+    slashCommands.push({ name: cmd.name, description: cmd.description || 'No description provided', options: opts });
   }
 });
+
+// Debug: print slash command payload to inspect invalid entries before registration
+try {
+  console.log('Preparing to register slash commands payload:');
+  console.log(JSON.stringify(slashCommands, null, 2));
+} catch (e) { console.log('Could not stringify slashCommands for debug'); }
 
 async function registerSlashCommands() {
   if (!process.env.DISCORD_BOT_TOKEN || !process.env.DISCORD_CLIENT_ID) return;
@@ -121,6 +135,17 @@ db.query(`
     last_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
   );
 `).catch(err => console.error(err));
+// Ensure shop inventory table exists (Postgres)
+db.query(`
+  CREATE TABLE IF NOT EXISTS hi_shop_inventory (
+    id SERIAL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    item TEXT NOT NULL,
+    metadata JSONB,
+    expires BIGINT,
+    created_at BIGINT NOT NULL
+  );
+`).catch(err => console.error('Could not create hi_shop_inventory table:', err));
 
 // --- Utility ---
 const timers = new Map();

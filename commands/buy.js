@@ -34,6 +34,17 @@ module.exports = {
 
   const shopHelpers = require('../lib/shopHelpers');
   try {
+      // Ensure the inventory table exists (defensive; migration should handle this)
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS hi_shop_inventory (
+          id SERIAL PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          item TEXT NOT NULL,
+          metadata JSONB,
+          expires BIGINT,
+          created_at BIGINT NOT NULL
+        )
+      `);
 
       // check balance
       const res = await db.query('SELECT count FROM hi_usages WHERE user_id = $1', [buyerId]);
@@ -81,19 +92,20 @@ module.exports = {
         }, timeoutMs);
         if (timers && timers.set) timers.set(target.id, timeout);
 
-        // record inventory/action
-        await db.query('INSERT INTO hi_shop_inventory (user_id, item, metadata, expires, created_at) VALUES ($1,$2,$3,$4,$5)', [buyerId, item, JSON.stringify({ target: target.id }), now + chosen.durationMs, now]);
+  // record inventory/action and return id
+  const insertRes = await db.query('INSERT INTO hi_shop_inventory (user_id, item, metadata, expires, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING id', [buyerId, item, JSON.stringify({ target: target.id }), now + chosen.durationMs, now]);
+  const insertedId = insertRes.rows[0] ? insertRes.rows[0].id : null;
 
-        const text = `You exchanged ${chosen.cost} hi to exile ${target.user.username} for ${Math.round(chosen.durationMs/60000)} minutes.`;
+  const text = `You exchanged ${chosen.cost} hi to exile ${target.user.username} for ${Math.round(chosen.durationMs/60000)} minutes.${insertedId ? ` (purchase id: ${insertedId})` : ''}`;
         if (isInteraction) return message.reply({ content: text, ephemeral: true });
         return message.reply(text);
       }
 
       // for other items, add inventory entry with expiry
       const expires = now + chosen.durationMs;
-      await db.query('INSERT INTO hi_shop_inventory (user_id, item, metadata, expires, created_at) VALUES ($1,$2,$3,$4,$5)', [buyerId, item, JSON.stringify({}), expires, now]);
-
-      const text = `Successfully purchased ${item}.`;
+  const insertRes = await db.query('INSERT INTO hi_shop_inventory (user_id, item, metadata, expires, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING id', [buyerId, item, JSON.stringify({}), expires, now]);
+  const insertedId = insertRes.rows[0] ? insertRes.rows[0].id : null;
+  const text = `Successfully purchased ${item}.${insertedId ? ` (purchase id: ${insertedId})` : ''}`;
       if (isInteraction) return message.reply({ content: text, ephemeral: true });
       return message.reply(text);
     } catch (err) {
