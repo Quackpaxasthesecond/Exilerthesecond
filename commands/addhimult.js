@@ -2,11 +2,12 @@ module.exports = {
   name: 'addhimult',
   description: 'Owner: add a temporary hi multiplier (scope: global or user)',
   slash: true,
+  // Required options must be listed before optional ones for Discord
   options: [
     { name: 'scope', description: 'global or user', type: 3, required: true },
-    { name: 'user', description: 'User (required when scope=user)', type: 6, required: false },
     { name: 'multiplier', description: 'Multiplier value (e.g. 2)', type: 4, required: true },
-    { name: 'minutes', description: 'Duration in minutes', type: 4, required: true }
+    { name: 'minutes', description: 'Duration in minutes', type: 4, required: true },
+    { name: 'user', description: 'User (required when scope=user)', type: 6, required: false }
   ],
   execute: async (message, args, context) => {
     const isInteraction = typeof message?.isChatInputCommand === 'function' && message.isChatInputCommand();

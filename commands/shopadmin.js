@@ -43,7 +43,8 @@ module.exports = {
       }
     }
     if (action === 'revoke' || action === 'refund') {
-      const id = isInteraction ? args.getInteger('id') : parseInt(args[2], 10);
+      // prefix form: shopadmin revoke <id> [amount]
+      const id = isInteraction ? args.getInteger('id') : parseInt(args[1], 10);
       if (!id) {
         const text = 'Usage: shopadmin revoke|refund <id> [amount]';
         if (isInteraction) return message.reply({ content: text, ephemeral: true });
@@ -55,7 +56,7 @@ module.exports = {
         const row = res.rows[0];
         await db.query('DELETE FROM hi_shop_inventory WHERE id = $1', [id]);
         if (action === 'refund') {
-          const amount = isInteraction ? args.getInteger('amount') : parseInt(args[3], 10);
+          const amount = isInteraction ? args.getInteger('amount') : parseInt(args[2], 10);
           if (!amount || isNaN(amount) || amount <= 0) return message.reply('Specify a positive refund amount.');
           await db.query('UPDATE hi_usages SET count = COALESCE(count,0) + $1 WHERE user_id = $2', [amount, row.user_id]);
           const text = `Refunded ${amount} hi to <@${row.user_id}> and revoked purchase ${id}.`;
