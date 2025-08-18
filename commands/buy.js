@@ -103,8 +103,19 @@ module.exports = {
 
       // for other items, add inventory entry with expiry
       const expires = now + chosen.durationMs;
-  const insertRes = await db.query('INSERT INTO hi_shop_inventory (user_id, item, metadata, expires, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING id', [buyerId, item, JSON.stringify({}), expires, now]);
+      // For extra_luck, store luck as percentage points in metadata (default 10)
+      const metadata = item === 'extra_luck' ? JSON.stringify({ luck: 10 }) : JSON.stringify({});
+  const insertRes = await db.query('INSERT INTO hi_shop_inventory (user_id, item, metadata, expires, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING id', [buyerId, item, metadata, expires, now]);
   const insertedId = insertRes.rows[0] ? insertRes.rows[0].id : null;
+  // If buying extra_luck, compute user's current total luck and show it
+  if (item === 'extra_luck') {
+    const shopHelpers = require('../lib/shopHelpers');
+    const current = await shopHelpers.getActiveEffects(db, buyerId).catch(() => ({}));
+    const totalLuck = current && current.extra_luck ? current.extra_luck : 0;
+    const text = `Successfully purchased extra_luck (+10%). Your current total luck bonus is now ${totalLuck}% for gambling and random exile calculations.${insertedId ? ` (purchase id: ${insertedId})` : ''}`;
+    if (isInteraction) return message.reply({ content: text, ephemeral: true });
+    return message.reply(text);
+  }
   const text = `Successfully purchased ${item}.${insertedId ? ` (purchase id: ${insertedId})` : ''}`;
       if (isInteraction) return message.reply({ content: text, ephemeral: true });
       return message.reply(text);

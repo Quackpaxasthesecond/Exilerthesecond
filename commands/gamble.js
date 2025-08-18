@@ -28,14 +28,16 @@ module.exports = {
   // Coin flip, modified by extra_luck
   const shopHelpers = require('../lib/shopHelpers');
   const active = await shopHelpers.getActiveEffects(db, userId).catch(() => ({}));
-  const extraLuck = active && active.extra_luck ? active.extra_luck : 0;
-  // translate extraLuck into win chance: each 10 luck = +1% win chance
-  const luckBonus = (extraLuck / 10) * 0.01; // e.g., 10 luck -> 0.01
-  const win = Math.random() < (0.5 + luckBonus);
-    // 2% exile chance
-    const exileChance = Math.random() < 0.02;
+  const extraLuckPct = active && active.extra_luck ? Number(active.extra_luck) : 0; // percentage points
+  // win chance is 50% base plus extraLuckPct percent (e.g. 10 => 60% win chance)
+  const winChance = Math.min(0.99, 0.5 + (extraLuckPct / 100));
+  const win = Math.random() < winChance;
+  // exile chance: base 2%, reduced by extra luck (each 10% luck reduces exile chance by 0.5%)
+  const exileBase = 0.02;
+  const exileReduction = Math.min(0.019, (extraLuckPct / 10) * 0.005);
+  const exileChance = Math.max(0, exileBase - exileReduction);
     let resultMsg = '';
-    if (win) {
+  if (win) {
       // 1% chance for 100x multiplier
       if (Math.random() < 0.01) {
         const mult = 100;
@@ -46,17 +48,19 @@ module.exports = {
         await db.query('UPDATE hi_usages SET count = count + $1 WHERE user_id = $2', [amount, userId]);
         resultMsg = `You won! Your hi count increased by ${amount}.`;
       }
-    } else {
+  } else {
       await db.query('UPDATE hi_usages SET count = count - $1 WHERE user_id = $2', [amount, userId]);
       resultMsg = `You lost! Your hi count decreased by ${amount}.`;
     }
-    // Get updated hi count
+  // Get updated hi count
     const newRes = await db.query('SELECT count FROM hi_usages WHERE user_id = $1', [userId]);
     hiCount = newRes.rows[0]?.count || 0;
-    resultMsg += `\nYour new hi count: ${hiCount}`;
+  resultMsg += `\nYour new hi count: ${hiCount}`;
+  // append current luck info
+  resultMsg += `\nYour current gamble luck bonus: ${extraLuckPct}% (applies to win chance)`;
   if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(resultMsg);
   return message.reply(resultMsg);
-    if (exileChance) {
+  if (exileChance) {
       // Exile logic: actually add the exiled role
       try {
         const member = await message.guild.members.fetch(userId);
