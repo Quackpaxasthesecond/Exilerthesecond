@@ -4,7 +4,14 @@ const { hiDuels } = require('./acceptduel');
 
 module.exports = {
   name: 'hi',
-  execute: async (message, args, context) => {
+  description: 'Use this for random fun! Try it often for streaks, combos, and roasts.',
+  // keep -hi prefix-only
+  slash: false,
+  options: [],
+  execute: async (input, args, context) => {
+    // support both message-style and interaction-adapted messageLike
+    const isInteraction = typeof input?.isChatInputCommand === 'function' && input.isChatInputCommand();
+    const message = !isInteraction ? input : input; // index adapter provides message-like object for interactions
     const { db, HI_STREAK_RESET, HI_CHAIN_WINDOW, HI_COMBO_WINDOW, FUNNY_EMOJIS, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS } = context;
     // Block hi command in specific channels
     const HI_BLOCKED_CHANNELS = ['1374052923956269136', '1351976782131363880', '1208809645205094481'];
@@ -66,7 +73,7 @@ module.exports = {
       hiState.comboUsers = [];
     }, HI_COMBO_WINDOW);
     // Pick a random member and roast them
-    const members = await message.guild.members.fetch();
+  const members = await message.guild.members.fetch();
     const filtered = members.filter(m => !m.user.bot && m.id !== message.author.id);
     if (filtered.size === 0) return message.reply("you will die....");
     const randomMember = filtered.random();

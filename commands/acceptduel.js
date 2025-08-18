@@ -7,7 +7,8 @@ module.exports = {
   description: 'Accept a HI DUEL challenge',
   slash: true,
   options: [],
-  execute: async (message, args, context) => {
+  execute: async (input, args, context) => {
+    const message = input;
     const guildId = message.guild.id;
     const duel = hiDuels[guildId];
     if (!duel || duel.accepted) {
@@ -22,7 +23,6 @@ module.exports = {
     duel.endTime = duel.startTime + 60 * 1000; // 1 minute
     message.channel.send(`HI DUEL between <@${duel.challenger}> and <@${duel.target}> has started! You have 1 minute to use as many -hi's as possible!`);
     // 10-second interval reminders
-    let interval = 10;
     const intervalId = setInterval(() => {
       if (!hiDuels[guildId] || !hiDuels[guildId].accepted) {
         clearInterval(intervalId);

@@ -236,8 +236,12 @@ client.on('interactionCreate', async (interaction) => {
     }
   }
 
-  // Defer immediately to avoid the application timeout (ephemeral ack to invoker)
-  try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* ignore */ }
+  // Defer according to command preference: by default defer ephemeral (only visible
+  // to the invoker). Commands can set `publicSlash: true` to request a public
+  // deferred reply. Commands can also set `postToChannel: false` to avoid creating
+  // a channel message and instead edit the deferred reply.
+  const ephemeralDefer = cmd && cmd.publicSlash === true ? false : true;
+  try { await interaction.deferReply({ ephemeral: ephemeralDefer }); } catch (e) { /* ignore */ }
 
   // Pre-fetch the referenced user and member so message-style commands that do
   // synchronous `message.mentions.members.first()` keep working.
@@ -261,17 +265,53 @@ client.on('interactionCreate', async (interaction) => {
   const originalChannelSend = originalChannel && originalChannel.send ? originalChannel.send.bind(originalChannel) : null;
   const originalAwaitMessages = originalChannel && originalChannel.awaitMessages ? originalChannel.awaitMessages.bind(originalChannel) : null;
 
+  // Mark whether adapter already posted to channel for this interaction
+  interaction._adapterPosted = false;
+
+  // Wrap interaction.reply/followUp so commands that call them directly after the
+  // adapter has posted to channel don't create duplicate public messages. If the
+  // adapter posted, convert replies to ephemeral followUps (only visible to invoker).
+  const origInteractionReply = interaction.reply ? interaction.reply.bind(interaction) : null;
+  const origInteractionFollowUp = interaction.followUp ? interaction.followUp.bind(interaction) : null;
+  interaction.reply = async (payload) => {
+    try {
+      if (interaction._adapterPosted) {
+        if (origInteractionFollowUp) return await origInteractionFollowUp(Object.assign({}, typeof payload === 'string' ? { content: payload } : payload, { ephemeral: true }));
+        return;
+      }
+      if (origInteractionReply) return await origInteractionReply(payload);
+    } catch (e) {/* ignore */}
+  };
+  interaction.followUp = async (payload) => {
+    try {
+      if (interaction._adapterPosted) {
+        if (origInteractionFollowUp) return await origInteractionFollowUp(Object.assign({}, typeof payload === 'string' ? { content: payload } : payload, { ephemeral: true }));
+        return;
+      }
+      if (origInteractionFollowUp) return await origInteractionFollowUp(payload);
+    } catch (e) {/* ignore */}
+  };
+
+  // Determine whether this command prefers posting to channel or wants to
+  // avoid channel posts (and instead use the deferred reply). Default is to
+  // post to channel.
+  const preferChannelPost = !(cmd && cmd.postToChannel === false);
+
   // Create a message-like adapter that routes replies to the interaction and
   // channel sends to the real channel while acknowledging the interaction.
   const messageLike = {
     author: interaction.user,
     member: interaction.member,
     guild: interaction.guild,
+    // mark this as created from an interaction
+    _isFromInteraction: true,
+    _cmd: cmd,
     // Provide a lightweight channel wrapper so we don't mutate Discord's Channel
     channel: {
       id: originalChannel ? originalChannel.id : null,
       send: async (...p) => {
         if (!originalChannelSend) throw new Error('No channel send available');
+        interaction._adapterPosted = true;
         return originalChannelSend(...p);
       },
       awaitMessages: originalAwaitMessages,
@@ -282,38 +322,44 @@ client.on('interactionCreate', async (interaction) => {
     },
     content: `/${interaction.commandName} ${args.join(' ')}`,
   reply: async (payload) => {
-      // Prefer sending to the channel so output is public and avoid creating a
-      // separate followUp message that duplicates the channel post.
       try {
-        const toSend = typeof payload === 'string' ? { content: payload } : payload;
+        const data = typeof payload === 'string' ? { content: payload } : payload;
+        // If this command prefers NOT to post to the channel, edit the deferred
+        // reply instead (which will be public when `publicSlash: true`). This
+        // avoids creating a channel message that could duplicate elsewhere.
+        if (!preferChannelPost) {
+          try {
+            if (interaction.deferred || interaction.replied) {
+              return await interaction.editReply(data);
+            }
+            return await interaction.reply(data);
+          } catch (e) {
+            try { return await interaction.followUp(data); } catch (ee) { /* ignore */ }
+          }
+        }
+
+        // Otherwise prefer posting to the channel and then editing the deferred
+        // reply with an acknowledgement/link so the invoker sees the result.
         if (originalChannelSend) {
           const sent = await originalChannelSend(typeof payload === 'string' ? payload : payload);
-          // Mirror the sent message into the deferred reply (so the interaction
-          // shows the same embed/content) without creating an extra followUp.
+          interaction._adapterPosted = true;
           try {
-            // Instead of mirroring the whole embed (which duplicates the message),
-            // edit the deferred reply with a short acknowledgement and a link to the
-            // posted channel message so users can view it in-channel.
-            try {
-              if (sent && interaction.guild && sent.id) {
-                const link = `https://discord.com/channels/${interaction.guild.id}/${originalChannel.id}/${sent.id}`;
-                // Edit ephemeral reply so only the command user sees the acknowledgement
-                await interaction.editReply({ content: `Posted: ${link}` });
-              } else {
-                await interaction.editReply({ content: 'Posted to channel.' });
-              }
-            } catch (e) { /* ignore edit errors */ }
+            if (sent && interaction.guild && sent.id) {
+              const link = `https://discord.com/channels/${interaction.guild.id}/${originalChannel.id}/${sent.id}`;
+              await interaction.editReply({ content: `Posted: ${link}` }).catch(() => {});
+            } else {
+              await interaction.editReply({ content: 'Posted to channel.' }).catch(() => {});
+            }
           } catch (e) { /* ignore edit errors */ }
           return sent;
         }
+
         // Fallback to interaction reply if no channel send available
-        const data = toSend;
         if (interaction.deferred || interaction.replied) {
           return interaction.followUp(Object.assign({}, data, { ephemeral: false }));
         }
         return interaction.reply(Object.assign({}, data, { ephemeral: false }));
       } catch (e) {
-        // Final fallback: send to channel wrapper
         try { return messageLike.channel.send(typeof payload === 'string' ? payload : payload); } catch (ee) { return null; }
       }
     }
@@ -321,8 +367,9 @@ client.on('interactionCreate', async (interaction) => {
 
   // Wrap channel.send so channel messages still go to the channel, and the
   // interaction reply is edited with an acknowledgement to avoid silence.
-  if (interaction.channel && typeof interaction.channel.send === 'function') {
+    if (interaction.channel && typeof interaction.channel.send === 'function') {
     messageLike.channel.send = async (payload) => {
+      interaction._adapterPosted = true;
       const sent = await originalChannelSend(typeof payload === 'string' ? payload : payload);
       // If the sent message contains embeds or content, mirror them into the interaction reply so
       // the user who used the slash command sees the same embed publicly.
@@ -331,7 +378,7 @@ client.on('interactionCreate', async (interaction) => {
         if (sent && sent.content) payloadToEdit.content = sent.content;
         if (sent && sent.embeds && sent.embeds.length) payloadToEdit.embeds = sent.embeds.map(e => e);
         // If we have something to show, edit the deferred reply to include it.
-        if (Object.keys(payloadToEdit).length > 0) {
+          if (Object.keys(payloadToEdit).length > 0) {
           // Ensure we don't exceed content limits
           if (payloadToEdit.content && payloadToEdit.content.length > 1900) payloadToEdit.content = payloadToEdit.content.slice(0, 1900) + '...';
           await interaction.editReply(payloadToEdit);

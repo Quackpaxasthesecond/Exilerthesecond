@@ -10,17 +10,13 @@ module.exports = {
   description: 'Challenge someone to a HI DUEL',
   slash: true,
   options: [
-    {
-      name: 'user',
-      description: 'User to challenge',
-      type: 6,
-      required: true
-    }
+    { name: 'user', description: 'User to challenge', type: 6, required: true }
   ],
-  execute: async (message, args, context) => {
-    const { db } = context;
+  execute: async (input, args, context) => {
+    const isInteraction = typeof input?.isChatInputCommand === 'function' && input.isChatInputCommand();
+    const message = input;
     const challenger = message.author;
-    const target = message.mentions.users.first();
+    const target = (isInteraction ? (args.getUser ? args.getUser('user') : null) : message.mentions.users.first());
     if (!target || target.id === challenger.id) {
       return message.reply('You must mention someone else to challenge to a HI DUEL!');
     }

@@ -6,8 +6,9 @@ module.exports = {
   slash: true,
   options: [],
   execute: async (message, args, context) => {
-    const { db, checkCooldown } = context;
-    if (checkCooldown(message.author.id, '-hileaderboard', message, message.member)) return;
+  const { db, checkCooldown } = context;
+  const isInteraction = typeof message?.isChatInputCommand === 'function' && message.isChatInputCommand();
+  if (checkCooldown(message.author.id, '-hileaderboard', message, message.member)) return;
     try {
       const res = await db.query(
         `SELECT user_id, count FROM hi_usages ORDER BY count DESC LIMIT 10`
@@ -16,7 +17,7 @@ module.exports = {
         return message.channel.send('No hi have been recorded yet.');
       }
       let leaderboard = '';
-      for (let i = 0; i < res.rows.length; i++) {
+  for (let i = 0; i < res.rows.length; i++) {
         let member;
         try {
           member = await message.guild.members.fetch(res.rows[i].user_id);

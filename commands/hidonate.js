@@ -17,11 +17,12 @@ module.exports = {
     }
   ],
   execute: async (message, args, context) => {
-    const { db } = context;
-    if (args.length < 2) return message.reply('Usage: -hidonate @user <amount>');
-    const target = message.mentions.users.first();
-    const amount = parseInt(args[1], 10);
-    if (!target || isNaN(amount) || amount <= 0) return message.reply('Usage: -hidonate @user <amount>');
+  const { db } = context;
+  const isInteraction = typeof message?.isChatInputCommand === 'function' && message.isChatInputCommand();
+  const target = isInteraction ? (args.getUser ? args.getUser('user') : null) : message.mentions.users.first();
+  const amount = isInteraction ? (args.getInteger ? args.getInteger('amount') : null) : parseInt(args[1], 10);
+  if (!target || !amount) return message.reply('Usage: -hidonate @user <amount>');
+  if (!target || isNaN(amount) || amount <= 0) return message.reply('Usage: -hidonate @user <amount>');
     if (target.id === message.author.id) return message.reply('You cannot donate hi to yourself.');
     // Check sender hi count
     const res = await db.query('SELECT count FROM hi_usages WHERE user_id = $1', [message.author.id]);
