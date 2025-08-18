@@ -6,6 +6,8 @@ module.exports = {
   name: 'acceptduel',
   description: 'Accept a HI DUEL challenge',
   slash: true,
+  publicSlash: true,
+  postToChannel: false,
   options: [],
   execute: async (input, args, context) => {
     const message = input;
@@ -21,7 +23,12 @@ module.exports = {
     duel.scores = {};
     duel.startTime = Date.now();
     duel.endTime = duel.startTime + 60 * 1000; // 1 minute
-    message.channel.send(`HI DUEL between <@${duel.challenger}> and <@${duel.target}> has started! You have 1 minute to use as many -hi's as possible!`);
+    const startMsg = `HI DUEL between <@${duel.challenger}> and <@${duel.target}> has started! You have 1 minute to use as many -hi's as possible!`;
+    if (message._isFromInteraction || module.exports.postToChannel === false) {
+      message.reply(startMsg);
+    } else {
+      message.channel.send(startMsg);
+    }
     // 10-second interval reminders
     const intervalId = setInterval(() => {
       if (!hiDuels[guildId] || !hiDuels[guildId].accepted) {
@@ -29,8 +36,12 @@ module.exports = {
         return;
       }
       const secondsLeft = Math.floor((duel.endTime - Date.now()) / 1000);
-      if (secondsLeft > 0 && secondsLeft % 10 === 0 && secondsLeft !== 60) {
-        message.channel.send(`${secondsLeft} seconds left in the HI DUEL!`);
+        if (secondsLeft > 0 && secondsLeft % 10 === 0 && secondsLeft !== 60) {
+        if (message._isFromInteraction || module.exports.postToChannel === false) {
+          message.reply(`${secondsLeft} seconds left in the HI DUEL!`);
+        } else {
+          message.channel.send(`${secondsLeft} seconds left in the HI DUEL!`);
+        }
       }
       if (secondsLeft <= 0) {
         clearInterval(intervalId);
@@ -64,7 +75,11 @@ module.exports = {
         duel.loserCount = (duel.loserCount || 0) + 1;
         resultMsg += `\n<@${duel.winner}> has won ${duel.winnerCount} duel(s). <@${duel.loser}> has lost ${duel.loserCount} duel(s).`;
       }
-      message.channel.send(resultMsg);
+      if (message._isFromInteraction || module.exports.postToChannel === false) {
+        message.reply(resultMsg);
+      } else {
+        message.channel.send(resultMsg);
+      }
       delete hiDuels[guildId];
     }, 60 * 1000);
   }

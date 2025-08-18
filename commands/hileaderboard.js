@@ -4,6 +4,8 @@ module.exports = {
   name: 'hilb',
   description: 'Show the top users who used -hi',
   slash: true,
+  publicSlash: true,
+  postToChannel: false,
   options: [],
   execute: async (message, args, context) => {
   const { db, checkCooldown } = context;
@@ -31,7 +33,10 @@ module.exports = {
         .setTitle('HI Leaderboard')
         .setDescription(leaderboard)
         .setColor(0x00b894);
-      message.channel.send({ embeds: [embed] });
+      if (message._isFromInteraction || module.exports.postToChannel === false) {
+        return message.reply({ embeds: [embed] });
+      }
+      return message.channel.send({ embeds: [embed] });
     } catch (err) {
       console.error(err);
       message.channel.send('An error occurred while fetching the hi leaderboard.');

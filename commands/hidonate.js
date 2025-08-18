@@ -2,6 +2,8 @@ module.exports = {
   name: 'hidonate',
   description: 'Donate your hi count to another user',
   slash: true,
+  publicSlash: true,
+  postToChannel: false,
   options: [
     {
       name: 'user',
@@ -31,7 +33,11 @@ module.exports = {
     // Transfer hi
     await db.query('UPDATE hi_usages SET count = count - $1 WHERE user_id = $2', [amount, message.author.id]);
     await db.query('INSERT INTO hi_usages (user_id, count) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET count = hi_usages.count + $2', [target.id, amount]);
-    message.reply(`You donated ${amount} hi to ${target.username}!`);
+    if (message._isFromInteraction || module.exports.postToChannel === false) {
+      message.reply(`You donated ${amount} hi to ${target.username}!`);
+    } else {
+      message.reply(`You donated ${amount} hi to ${target.username}!`);
+    }
     try {
       const member = await message.guild.members.fetch(target.id);
       member.send(`${message.author.username} donated you ${amount} hi!`);
