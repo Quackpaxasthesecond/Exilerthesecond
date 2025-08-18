@@ -147,6 +147,14 @@ db.query(`
   );
 `).catch(err => console.error('Could not create hi_shop_inventory table:', err));
 
+// Persist Killwitari cooldowns so ability usage survives restarts
+db.query(`
+  CREATE TABLE IF NOT EXISTS killwitari_cooldowns (
+    user_id TEXT PRIMARY KEY,
+    last_used BIGINT
+  );
+`).catch(err => console.error('Could not create killwitari_cooldowns table:', err));
+
 // --- Utility ---
 const timers = new Map();
 const cooldowns = new Map();

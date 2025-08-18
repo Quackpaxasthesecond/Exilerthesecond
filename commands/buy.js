@@ -22,7 +22,9 @@ module.exports = {
     const items = {
       xp_multiplier: { cost: 50000, durationMs: 60 * 60 * 1000 },
       extra_luck: { cost: 25000, durationMs: 60 * 60 * 1000 },
-      random_exile: { cost: 100000, durationMs: 10 * 60 * 1000 }
+  random_exile: { cost: 100000, durationMs: 10 * 60 * 1000 },
+  // permanent special ability that requires admin-revocation to remove
+  killwitari: { cost: 250000, durationMs: null }
     };
 
     const chosen = items[item];
@@ -101,10 +103,10 @@ module.exports = {
         return message.reply(text);
       }
 
-      // for other items, add inventory entry with expiry
-      const expires = now + chosen.durationMs;
-      // For extra_luck, store luck as percentage points in metadata (default 10)
-      const metadata = item === 'extra_luck' ? JSON.stringify({ luck: 10 }) : JSON.stringify({});
+    // for other items, add inventory entry
+    const expires = chosen.durationMs ? now + chosen.durationMs : null;
+    // For extra_luck, store luck as percentage points in metadata (default 10)
+    const metadata = item === 'extra_luck' ? JSON.stringify({ luck: 10 }) : JSON.stringify({});
   const insertRes = await db.query('INSERT INTO hi_shop_inventory (user_id, item, metadata, expires, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING id', [buyerId, item, metadata, expires, now]);
   const insertedId = insertRes.rows[0] ? insertRes.rows[0].id : null;
   // If buying extra_luck, compute user's current total luck and show it

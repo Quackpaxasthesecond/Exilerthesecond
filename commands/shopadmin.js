@@ -11,8 +11,13 @@ module.exports = {
   execute: async (message, args, context) => {
     const { db } = context;
     const isInteraction = typeof message?.isChatInputCommand === 'function' && message.isChatInputCommand();
-    if (!message.guild || message.guild.ownerId !== (message.author?.id || message.user?.id)) {
-      const text = 'Only the server owner can use this command.';
+    // Allow server owner or admins/mods
+    const invokerId = message.author?.id || message.user?.id;
+    const isOwner = message.guild && message.guild.ownerId === invokerId;
+    const member = message.member;
+    const isAdmin = member && member.roles && member.roles.cache && (member.roles.cache.has(context.ROLE_IDS?.admin) || member.roles.cache.has(context.ROLE_IDS?.mod));
+    if (!message.guild || (!isOwner && !isAdmin)) {
+      const text = 'Only the server owner or admins/mods can use this command.';
       if (isInteraction) return message.reply({ content: text, ephemeral: true });
       return message.reply(text);
     }
@@ -69,6 +74,36 @@ module.exports = {
       } catch (e) {
         console.error(e);
         const text = 'Error modifying purchase.';
+        if (isInteraction) return message.reply({ content: text, ephemeral: true });
+        return message.reply(text);
+      }
+    }
+    if (action === 'revokeperma') {
+      // Usage: shopadmin revokeperma <user> <item>
+      const target = isInteraction ? (args.getUser('user') && args.getUser('user').id) : (args[1] && args[1].replace(/[^0-9]/g, ''));
+      const itemKey = isInteraction ? args.getString('id') : args[2];
+      if (!target || !itemKey) {
+        const text = 'Usage: shopadmin revokeperma <user> <itemKey>'; 
+        if (isInteraction) return message.reply({ content: text, ephemeral: true });
+        return message.reply(text);
+      }
+      try {
+        const del = await db.query('DELETE FROM hi_shop_inventory WHERE user_id = $1 AND item = $2 AND expires IS NULL RETURNING id, user_id', [target, itemKey]);
+        if (del.rows.length === 0) {
+          const text = `No permanent '${itemKey}' found for <@${target}>.`;
+          if (isInteraction) return message.reply({ content: text, ephemeral: true });
+          return message.reply(text);
+        }
+        // Cleanup side tables for known permanent items
+        if (itemKey === 'killwitari') {
+          await db.query('DELETE FROM killwitari_cooldowns WHERE user_id = $1', [target]);
+        }
+        const text = `Revoked permanent '${itemKey}' from <@${target}> (removed ${del.rows.length} record(s)).`;
+        if (isInteraction) return message.reply({ content: text, ephemeral: false });
+        return message.reply(text);
+      } catch (e) {
+        console.error(e);
+        const text = 'Error revoking permanent item.';
         if (isInteraction) return message.reply({ content: text, ephemeral: true });
         return message.reply(text);
       }
