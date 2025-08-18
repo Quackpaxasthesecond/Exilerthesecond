@@ -25,6 +25,9 @@ module.exports = {
 - \`-currenthi\` : Show your current hi, streak, and chain
 - \`-currentchain\` : Show the current and record hi chain for the server
 - \`-hidonate @user <amount>\` : Donate your hi count to another user
+- \`-shop\` : View the HI shop and available items.
+- \`-buy\` : Purchase an item from the HI shop.
+- \`-inventory\` : View your HI shop inventory.
 
 **Hi Command Features:**
 - **Hi Streaks:** Use -hi repeatedly (within 12 hours) to build your personal streak.
