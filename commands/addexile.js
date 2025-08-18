@@ -2,6 +2,8 @@ module.exports = {
   name: 'addexile',
   description: 'Add exiles to a user (owner only)',
   slash: true,
+  publicSlash: true,
+  postToChannel: false,
   options: [
     {
       name: 'user',
@@ -22,14 +24,14 @@ module.exports = {
     if (checkCooldown(message.author.id, '-addexile', message, message.member)) return;
     if (message.guild.ownerId !== (message.author?.id || message.user?.id)) {
       const text = "Only the server owner can modify leaderboard records.";
-      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      if (isInteraction || module.exports.postToChannel === false) return message.reply({ content: text, ephemeral: true });
       return message.reply(text);
     }
     const target = message.mentions.members.first();
     const amount = parseInt(args[1], 10);
     if (!target || isNaN(amount) || amount <= 0) {
       const text = "Usage: `-addexile @user <positive number>`";
-      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      if (isInteraction || module.exports.postToChannel === false) return message.reply({ content: text, ephemeral: true });
       return message.reply(text);
     }
     try {
