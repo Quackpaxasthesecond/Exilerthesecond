@@ -2,6 +2,8 @@ module.exports = {
   name: 'currenthi',
   description: 'Show your current hi, streak, and chain',
   slash: true,
+  publicSlash: true,
+  postToChannel: false,
   options: [],
   execute: async (message, args, context) => {
     const { db } = context;
@@ -15,6 +17,7 @@ module.exports = {
     // Get chain (guild-wide)
     const chainRes = await db.query('SELECT chain_count FROM hi_chains WHERE guild_id = $1', [message.guild.id]);
     const chain = chainRes.rows[0]?.chain_count || 0;
-    message.reply(`Current hi: ${hiCount}\nCurrent streak: ${streak}\nCurrent chain: ${chain}`);
+  if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(`Current hi: ${hiCount}\nCurrent streak: ${streak}\nCurrent chain: ${chain}`);
+  return message.reply(`Current hi: ${hiCount}\nCurrent streak: ${streak}\nCurrent chain: ${chain}`);
   }
 };

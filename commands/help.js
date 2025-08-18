@@ -2,6 +2,8 @@ module.exports = {
   name: 'help',
   description: 'Show help for all commands',
   slash: true,
+  publicSlash: true,
+  postToChannel: false,
   options: [],
   execute: async (message, args, context) => {
     const { checkCooldown } = context;
@@ -31,6 +33,7 @@ module.exports = {
 - **Hi Transfer:** Use -hidonate to give your hi to someone else.
 - **Hi Duel:** Challenge another user to a hi duel. Use -hiduel @user to start, and -acceptduel to accept. Most -hi's in 1 minute wins. Bonus for 60+ hi's!
     `;
-    message.channel.send(helpMessage);
+  if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(helpMessage);
+  return message.channel.send(helpMessage);
   }
 };

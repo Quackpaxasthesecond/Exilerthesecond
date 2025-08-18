@@ -34,16 +34,6 @@ fs.readdirSync('./commands').filter(f => f.endsWith('.js')).forEach(file => {
   commands.set(command.name, command);
 });
 
-// Apply defaults: make all commands (except -hi) use public slash replies and
-// avoid posting to the channel for slash invocations. This central change
-// prevents editing every individual file.
-commands.forEach((cmd, name) => {
-  if (name === 'hi') return; // keep -hi prefix-only and unchanged
-  // set defaults if not explicitly provided
-  if (cmd.publicSlash === undefined) cmd.publicSlash = true;
-  if (cmd.postToChannel === undefined) cmd.postToChannel = false;
-});
-
 // --- HTTP Server for Uptime ---
 http.createServer((req, res) => {
   res.writeHead(200);

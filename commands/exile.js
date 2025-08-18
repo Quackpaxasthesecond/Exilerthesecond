@@ -2,6 +2,8 @@ module.exports = {
   name: 'exile',
   description: 'Exile a user (mods/admins only)',
   slash: true,
+  publicSlash: true,
+  postToChannel: false,
   options: [
     { name: 'user', description: 'User to exile', type: 6, required: true },
     { name: 'minutes', description: 'Duration in minutes', type: 4, required: false }
@@ -44,21 +46,21 @@ module.exports = {
 
       if (duration && !isNaN(duration) && duration > 0) {
         const notify = `${targetMember.user.username} has been exiled for ${duration} minutes.`;
-        if (isInteraction) await interaction.reply({ content: notify, ephemeral: true }); else message.channel.send(notify);
+        if (isInteraction || module.exports.postToChannel === false) await (message.reply ? message.reply(notify) : interaction.reply({ content: notify, ephemeral: true })); else message.channel.send(notify);
         if (timers.has(targetMember.id)) clearTimeout(timers.get(targetMember.id));
         const timeout = setTimeout(async () => {
           const refreshed = isInteraction ? await input.guild.members.fetch(targetMember.id).catch(() => null) : await message.guild.members.fetch(targetMember.id).catch(() => null);
           if (refreshed && refreshed.roles.cache.has(ROLE_IDS.exiled)) {
             await refreshed.roles.remove(ROLE_IDS.exiled);
-            if (SPECIAL_MEMBERS.includes(refreshed.id)) {
-              await refreshed.roles.add(ROLE_IDS.uncle);
-              (isInteraction ? input.channel.send(`${refreshed.user.username} the unc has been automatically unexiled.`) : message.channel.send(`${refreshed.user.username} the unc has been automatically unexiled.`));
-            } else if (SWAGGER_MEMBERS.includes(refreshed.id)) {
-              await refreshed.roles.add(ROLE_IDS.swaggers);
-              (isInteraction ? input.channel.send(`${refreshed.user.username} the swagger has been automatically unexiled.`) : message.channel.send(`${refreshed.user.username} the swagger has been automatically unexiled.`));
-            } else {
-              (isInteraction ? input.channel.send(`${refreshed.user.username} has been automatically unexiled.`) : message.channel.send(`${refreshed.user.username} has been automatically unexiled.`));
-            }
+                  if (SPECIAL_MEMBERS.includes(refreshed.id)) {
+                    await refreshed.roles.add(ROLE_IDS.uncle);
+                    if (message && message._isFromInteraction) await message.reply(`${refreshed.user.username} the unc has been automatically unexiled.`); else message.channel.send(`${refreshed.user.username} the unc has been automatically unexiled.`);
+                  } else if (SWAGGER_MEMBERS.includes(refreshed.id)) {
+                    await refreshed.roles.add(ROLE_IDS.swaggers);
+                    if (message && message._isFromInteraction) await message.reply(`${refreshed.user.username} the swagger has been automatically unexiled.`); else message.channel.send(`${refreshed.user.username} the swagger has been automatically unexiled.`);
+                  } else {
+                    if (message && message._isFromInteraction) await message.reply(`${refreshed.user.username} has been automatically unexiled.`); else message.channel.send(`${refreshed.user.username} has been automatically unexiled.`);
+                  }
           }
           timers.delete(targetMember.id);
         }, duration * 60 * 1000);
