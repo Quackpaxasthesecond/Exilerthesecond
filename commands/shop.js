@@ -13,9 +13,9 @@ module.exports = {
         { name: 'xp_multiplier', value: 'x2 XP for 60 minutes — Cost: 50,000 hi', inline: false },
         { name: 'extra_luck', value: '+10% gamble luck for 60 minutes — Cost: 25,000 hi', inline: false },
         { name: 'random_exile', value: 'Exile a random eligible member for 10 minutes — Cost: 100,000 hi', inline: false },
-         { name: 'killwitari', value: 'Permanent ability: kills witari — Cost: 200,000 hi — good luck buying it', inline: false }
+        { name: 'killwitari', value: 'Permanent ability: kills witari — Cost: 200,000 hi — good luck buying it', inline: false }
       )
-  .setFooter({ text: 'Use -buy <item> to purchase. Example: -buy extra_luck — Admins can revoke permanent items with shopadmin revokeperma <user> <item>' });
+      .setFooter({ text: 'Use -buy <item> to purchase. Example: -buy extra_luck' });
 
     if (isInteraction) return message.reply({ embeds: [embed], ephemeral: true });
     return message.reply({ embeds: [embed] });
