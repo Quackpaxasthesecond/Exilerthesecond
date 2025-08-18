@@ -39,7 +39,7 @@ module.exports = {
       }
       await db.query(`INSERT INTO exiles (issuer, target) VALUES ${values.join(',')}`);
   const text = `Added ${amount} exile${amount > 1 ? 's' : ''} for ${target.user.username}.`;
-  if (isInteraction) return message.reply({ content: text, ephemeral: true });
+  if (isInteraction || module.exports.postToChannel === false) return message.reply({ content: text, ephemeral: true });
   return message.channel.send(text);
     } catch (err) {
       console.error(err);

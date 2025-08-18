@@ -35,7 +35,7 @@ module.exports = {
     const confirmed = await confirmAction(message, `Type \`yes\` to remove up to ${amount} exiles for ${target.user.username}.`);
     if (!confirmed) {
       const text = 'Action cancelled.';
-      if (isInteraction) return message.reply({ content: text, ephemeral: true });
+      if (isInteraction || module.exports.postToChannel === false) return message.reply({ content: text, ephemeral: true });
       return message.channel.send(text);
     }
     try {
@@ -45,9 +45,9 @@ module.exports = {
         )`,
         [target.id, amount]
       );
-      const text = `Removed up to ${amount} exile${amount > 1 ? 's' : ''} for ${target.user.username}.`;
-      if (isInteraction) return message.reply({ content: text, ephemeral: true });
-      return message.channel.send(text);
+  const text = `Removed up to ${amount} exile${amount > 1 ? 's' : ''} for ${target.user.username}.`;
+  if (isInteraction || module.exports.postToChannel === false) return message.reply({ content: text, ephemeral: true });
+  return message.channel.send(text);
     } catch (err) {
       console.error(err);
       const text = 'Error removing exile entries.';

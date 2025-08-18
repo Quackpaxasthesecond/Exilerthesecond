@@ -55,7 +55,7 @@ module.exports = {
     hiCount = newRes.rows[0]?.count || 0;
     resultMsg += `\nYour new hi count: ${hiCount}`;
   if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(resultMsg);
-  message.reply(resultMsg);
+  return message.reply(resultMsg);
     if (exileChance) {
       // Exile logic: actually add the exiled role
       try {
@@ -64,7 +64,8 @@ module.exports = {
         await member.roles.remove(ROLE_IDS.swaggers);
         await member.roles.remove(ROLE_IDS.uncle);
         await db.query('INSERT INTO exiles (issuer, target) VALUES ($1, $2)', [message.author.id, userId]);
-  if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(`<@${userId}> has been exiled by the gambling gods!`); else message.channel.send(`<@${userId}> has been exiled by the gambling gods!`);
+  if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(`<@${userId}> has been exiled by the gambling gods!`);
+  return message.channel.send(`<@${userId}> has been exiled by the gambling gods!`);
         // --- Auto unexile after 3 minutes ---
         setTimeout(async () => {
           const refreshed = await message.guild.members.fetch(userId).catch(() => null);
@@ -72,17 +73,21 @@ module.exports = {
             await refreshed.roles.remove(ROLE_IDS.exiled);
             if (context.SPECIAL_MEMBERS && context.SPECIAL_MEMBERS.includes(refreshed.id)) {
               await refreshed.roles.add(ROLE_IDS.uncle);
-                if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(`${refreshed.user.username} the unc has been automatically unexiled.`); else message.channel.send(`${refreshed.user.username} the unc has been automatically unexiled.`);
+                if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(`${refreshed.user.username} the unc has been automatically unexiled.`);
+                return message.channel.send(`${refreshed.user.username} the unc has been automatically unexiled.`);
             } else if (context.SWAGGER_MEMBERS && context.SWAGGER_MEMBERS.includes(refreshed.id)) {
               await refreshed.roles.add(ROLE_IDS.swaggers);
-                if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(`${refreshed.user.username} the swagger has been automatically unexiled.`); else message.channel.send(`${refreshed.user.username} the swagger has been automatically unexiled.`);
+                if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(`${refreshed.user.username} the swagger has been automatically unexiled.`);
+                return message.channel.send(`${refreshed.user.username} the swagger has been automatically unexiled.`);
             } else {
-                    if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(`${refreshed.user.username} has been automatically unexiled.`); else message.channel.send(`${refreshed.user.username} has been automatically unexiled.`);
+                    if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(`${refreshed.user.username} has been automatically unexiled.`);
+                    return message.channel.send(`${refreshed.user.username} has been automatically unexiled.`);
             }
           }
         }, 3 * 60 * 1000);
       } catch (err) {
-  if (message._isFromInteraction || module.exports.postToChannel === false) message.reply('Tried to exile you, but something went wrong.'); else message.channel.send('Tried to exile you, but something went wrong.');
+  if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply('Tried to exile you, but something went wrong.');
+  return message.channel.send('Tried to exile you, but something went wrong.');
       }
     }
     gambleCooldowns.set(userId, now);
