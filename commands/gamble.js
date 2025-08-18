@@ -25,8 +25,13 @@ module.exports = {
     const res = await db.query('SELECT count FROM hi_usages WHERE user_id = $1', [userId]);
     let hiCount = res.rows[0]?.count || 0;
     if (hiCount < amount) return message.reply('You do not have enough hi to gamble that amount.');
-    // Coin flip
-    const win = Math.random() < 0.5;
+  // Coin flip, modified by extra_luck
+  const shopHelpers = require('../lib/shopHelpers');
+  const active = await shopHelpers.getActiveEffects(db, userId).catch(() => ({}));
+  const extraLuck = active && active.extra_luck ? active.extra_luck : 0;
+  // translate extraLuck into win chance: each 10 luck = +1% win chance
+  const luckBonus = (extraLuck / 10) * 0.01; // e.g., 10 luck -> 0.01
+  const win = Math.random() < (0.5 + luckBonus);
     // 2% exile chance
     const exileChance = Math.random() < 0.02;
     let resultMsg = '';
