@@ -25,10 +25,9 @@ module.exports = {
     duel.endTime = duel.startTime + 60 * 1000; // 1 minute
     const startMsg = `HI DUEL between <@${duel.challenger}> and <@${duel.target}> has started! You have 1 minute to use as many -hi's as possible!`;
     if (message._isFromInteraction || module.exports.postToChannel === false) {
-      message.reply(startMsg);
-    } else {
-      message.channel.send(startMsg);
+      return message.reply(startMsg);
     }
+    return message.channel.send(startMsg);
     // 10-second interval reminders
     const intervalId = setInterval(() => {
       if (!hiDuels[guildId] || !hiDuels[guildId].accepted) {
@@ -38,10 +37,9 @@ module.exports = {
       const secondsLeft = Math.floor((duel.endTime - Date.now()) / 1000);
         if (secondsLeft > 0 && secondsLeft % 10 === 0 && secondsLeft !== 60) {
         if (message._isFromInteraction || module.exports.postToChannel === false) {
-          message.reply(`${secondsLeft} seconds left in the HI DUEL!`);
-        } else {
-          message.channel.send(`${secondsLeft} seconds left in the HI DUEL!`);
+          return message.reply(`${secondsLeft} seconds left in the HI DUEL!`);
         }
+        return message.channel.send(`${secondsLeft} seconds left in the HI DUEL!`);
       }
       if (secondsLeft <= 0) {
         clearInterval(intervalId);
@@ -76,10 +74,9 @@ module.exports = {
         resultMsg += `\n<@${duel.winner}> has won ${duel.winnerCount} duel(s). <@${duel.loser}> has lost ${duel.loserCount} duel(s).`;
       }
       if (message._isFromInteraction || module.exports.postToChannel === false) {
-        message.reply(resultMsg);
-      } else {
-        message.channel.send(resultMsg);
+        return message.reply(resultMsg);
       }
+      return message.channel.send(resultMsg);
       delete hiDuels[guildId];
     }, 60 * 1000);
   }

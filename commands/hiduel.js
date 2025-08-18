@@ -34,10 +34,8 @@ module.exports = {
       endTime: null
     };
     // If invoked via slash, edit the deferred reply instead of posting to channel
-    if (message._isFromInteraction || module.exports.postToChannel === false) {
-      return message.reply(`${target}, you have been challenged to a HI DUEL by ${challenger}! Type -acceptduel to accept. Most -hi's in 1 minute wins!`);
-    }
-    return message.channel.send(`${target}, you have been challenged to a HI DUEL by ${challenger}! Type -acceptduel to accept. Most -hi's in 1 minute wins!`);
+  if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(`${target}, you have been challenged to a HI DUEL by ${challenger}! Type -acceptduel to accept. Most -hi's in 1 minute wins!`);
+  return message.channel.send(`${target}, you have been challenged to a HI DUEL by ${challenger}! Type -acceptduel to accept. Most -hi's in 1 minute wins!`);
   }
 };
 

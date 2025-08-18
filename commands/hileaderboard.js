@@ -16,6 +16,7 @@ module.exports = {
         `SELECT user_id, count FROM hi_usages ORDER BY count DESC LIMIT 10`
       );
       if (res.rows.length === 0) {
+        if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply('No hi have been recorded yet.');
         return message.channel.send('No hi have been recorded yet.');
       }
       let leaderboard = '';
@@ -33,13 +34,12 @@ module.exports = {
         .setTitle('HI Leaderboard')
         .setDescription(leaderboard)
         .setColor(0x00b894);
-      if (message._isFromInteraction || module.exports.postToChannel === false) {
-        return message.reply({ embeds: [embed] });
-      }
-      return message.channel.send({ embeds: [embed] });
+  if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply({ embeds: [embed] });
+  return message.channel.send({ embeds: [embed] });
     } catch (err) {
       console.error(err);
-      message.channel.send('An error occurred while fetching the hi leaderboard.');
+      if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply('An error occurred while fetching the hi leaderboard.');
+      return message.channel.send('An error occurred while fetching the hi leaderboard.');
     }
   }
 };

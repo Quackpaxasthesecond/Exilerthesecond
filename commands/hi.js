@@ -32,6 +32,7 @@ module.exports = {
     }
     await db.query('INSERT INTO hi_streaks (user_id, streak, last) VALUES ($1, $2, to_timestamp($3 / 1000.0)) ON CONFLICT (user_id) DO UPDATE SET streak = $2, last = to_timestamp($3 / 1000.0)', [message.author.id, streak, Date.now()]);
     if (streak > 1 && streak % 5 === 0) {
+      if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(`${message.author.username} is on a hi streak of ${streak}!`);
       message.channel.send(`${message.author.username} is on a hi streak of ${streak}!`);
     }
     // --- Persistent Hi Chain (guild-wide) ---
@@ -51,6 +52,7 @@ module.exports = {
     }
     await db.query('INSERT INTO hi_chains (guild_id, chain_count, chain_record, last_timestamp) VALUES ($1, $2, $3, to_timestamp($4 / 1000.0)) ON CONFLICT (guild_id) DO UPDATE SET chain_count = $2, chain_record = $3, last_timestamp = to_timestamp($4 / 1000.0)', [message.guild.id, chain, chainRecord, Date.now()]);
     if (chain > 1 && chain === chainRecord) {
+      if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(`New HI CHAIN RECORD! ${chainRecord} in a row! 🔥`);
       message.channel.send(`New HI CHAIN RECORD! ${chainRecord} in a row! 🔥`);
     }
     // Hi duel scoring
@@ -66,9 +68,10 @@ module.exports = {
       hiState.comboUsers.push(message.author.username);
     }
     if (hiState.comboTimeout) clearTimeout(hiState.comboTimeout);
-    hiState.comboTimeout = setTimeout(() => {
+      hiState.comboTimeout = setTimeout(() => {
       if (hiState.comboUsers.length > 1) {
-        message.channel.send(`HI COMBO! ${hiState.comboUsers.join(', ')}! \uD83D\uDCA5`);
+        if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(`HI COMBO! ${hiState.comboUsers.join(', ')}! \uD83D\uDCA5`);
+        else message.channel.send(`HI COMBO! ${hiState.comboUsers.join(', ')}! \uD83D\uDCA5`);
       }
       hiState.comboUsers = [];
     }, HI_COMBO_WINDOW);
@@ -80,11 +83,11 @@ module.exports = {
     const roast = roasts[Math.floor(Math.random() * roasts.length)];
     // Fix: Actually use RNG for roast/image, not just quotes
     if (roast.startsWith('http')) {
-      message.channel.send(roast);
+      if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(roast); else message.channel.send(roast);
     } else if (roast.includes('{user}')) {
-      message.channel.send(roast.replace('{user}', randomMember.user.username));
+      if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(roast.replace('{user}', randomMember.user.username)); else message.channel.send(roast.replace('{user}', randomMember.user.username));
     } else {
-      message.channel.send(roast);
+      if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(roast); else message.channel.send(roast);
     }
     // Random emoji reaction
     if (Math.random() < 0.2) {
@@ -102,7 +105,7 @@ module.exports = {
     if (!hiZone[userId] || hiZone[userId].expires < now) {
       if (Math.random() < 0.02) {
         hiZone[userId] = { expires: now + 10 * 60 * 1000 };
-        message.channel.send(`${message.author.username} has entered the HI ZONE! 2x hi for 10 minutes! 🔥`);
+  if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(`${message.author.username} has entered the HI ZONE! 2x hi for 10 minutes! 🔥`); else message.channel.send(`${message.author.username} has entered the HI ZONE! 2x hi for 10 minutes! 🔥`);
       }
     }
   // Increment hi usage count in DB with booster multiplier and temporary multipliers
