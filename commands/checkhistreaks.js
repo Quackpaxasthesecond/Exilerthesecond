@@ -17,9 +17,11 @@ module.exports = {
   const userId = user.id;
   const streak = hiStreaks[userId]?.streak || 0;
     if (streak > 0) {
-      message.channel.send(`${user.username} is on a HI streak of ${streak}!`);
+      if (isInteraction || module.exports.postToChannel === false) return message.reply(`${user.username} is on a HI streak of ${streak}!`);
+      return message.channel.send(`${user.username} is on a HI streak of ${streak}!`);
     } else {
-      message.channel.send(`${user.username} does not have a HI streak right now.`);
+      if (isInteraction || module.exports.postToChannel === false) return message.reply(`${user.username} does not have a HI streak right now.`);
+      return message.channel.send(`${user.username} does not have a HI streak right now.`);
     }
   }
 };

@@ -34,6 +34,7 @@ module.exports = {
 - **Hi Duel:** Challenge another user to a hi duel. Use -hiduel @user to start, and -acceptduel to accept. Most -hi's in 1 minute wins. Bonus for 60+ hi's!
     `;
   if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(helpMessage);
+  if (isInteraction || module.exports.postToChannel === false) return message.reply(helpMessage);
   return message.channel.send(helpMessage);
   }
 };

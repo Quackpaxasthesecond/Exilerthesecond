@@ -46,7 +46,11 @@ module.exports = {
 
       if (duration && !isNaN(duration) && duration > 0) {
         const notify = `${targetMember.user.username} has been exiled for ${duration} minutes.`;
-        if (isInteraction || module.exports.postToChannel === false) await (message.reply ? message.reply(notify) : interaction.reply({ content: notify, ephemeral: true })); else message.channel.send(notify);
+        if (isInteraction || module.exports.postToChannel === false) {
+          if (message && message.reply) await message.reply(notify); else await interaction.reply({ content: notify, ephemeral: true });
+        } else {
+          message.channel.send(notify);
+        }
         if (timers.has(targetMember.id)) clearTimeout(timers.get(targetMember.id));
         const timeout = setTimeout(async () => {
           const refreshed = isInteraction ? await input.guild.members.fetch(targetMember.id).catch(() => null) : await message.guild.members.fetch(targetMember.id).catch(() => null);
@@ -67,7 +71,7 @@ module.exports = {
         timers.set(targetMember.id, timeout);
       } else {
         const notify = `${targetMember.user.username} has been exiled.`;
-        if (isInteraction) await interaction.reply({ content: notify, ephemeral: true }); else message.channel.send(notify);
+  if (isInteraction) await interaction.reply({ content: notify, ephemeral: true }); else message.channel.send(notify);
       }
     } catch (err) {
       console.error(err);

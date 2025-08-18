@@ -31,7 +31,8 @@ module.exports = {
   return message.channel.send({ embeds: [embed] });
     } catch (err) {
       console.error(err);
-      message.channel.send('An error occurred while fetching the leaderboard.');
+      if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply('An error occurred while fetching the leaderboard.');
+      return message.channel.send('An error occurred while fetching the leaderboard.');
     }
   }
 };

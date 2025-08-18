@@ -26,7 +26,7 @@ module.exports = {
       return message.reply(text);
     }
     const confirmed = await confirmAction(message, `Type \`yes\` to reset all exiles for ${target.user.username}.`);
-    if (!confirmed) {
+      if (!confirmed) {
       const text = 'Action cancelled.';
       if (isInteraction) return message.reply({ content: text, ephemeral: true });
       return message.channel.send(text);

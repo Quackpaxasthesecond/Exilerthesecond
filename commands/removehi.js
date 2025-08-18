@@ -41,9 +41,9 @@ module.exports = {
     try {
       // Remove up to the specified amount from the user's hi_usages count
       await db.query('UPDATE hi_usages SET count = GREATEST(count - $1, 0) WHERE user_id = $2', [amount, target.id]);
-      const text = `Removed up to ${amount} hi from ${target.user.username}.`;
-      if (isInteraction) return message.reply({ content: text, ephemeral: true });
-      return message.channel.send(text);
+  const text = `Removed up to ${amount} hi from ${target.user.username}.`;
+  if (isInteraction) return message.reply({ content: text, ephemeral: true });
+  return message.channel.send(text);
     } catch (err) {
       console.error(err);
       const text = 'Error removing hi entries.';

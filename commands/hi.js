@@ -70,8 +70,8 @@ module.exports = {
     if (hiState.comboTimeout) clearTimeout(hiState.comboTimeout);
       hiState.comboTimeout = setTimeout(() => {
       if (hiState.comboUsers.length > 1) {
-        if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(`HI COMBO! ${hiState.comboUsers.join(', ')}! \uD83D\uDCA5`);
-        else message.channel.send(`HI COMBO! ${hiState.comboUsers.join(', ')}! \uD83D\uDCA5`);
+    if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(`HI COMBO! ${hiState.comboUsers.join(', ')}! \uD83D\uDCA5`);
+    return message.channel.send(`HI COMBO! ${hiState.comboUsers.join(', ')}! \uD83D\uDCA5`);
       }
       hiState.comboUsers = [];
     }, HI_COMBO_WINDOW);
@@ -83,11 +83,14 @@ module.exports = {
     const roast = roasts[Math.floor(Math.random() * roasts.length)];
     // Fix: Actually use RNG for roast/image, not just quotes
     if (roast.startsWith('http')) {
-      if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(roast); else message.channel.send(roast);
+  if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(roast);
+  return message.channel.send(roast);
     } else if (roast.includes('{user}')) {
-      if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(roast.replace('{user}', randomMember.user.username)); else message.channel.send(roast.replace('{user}', randomMember.user.username));
+  if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(roast.replace('{user}', randomMember.user.username));
+  return message.channel.send(roast.replace('{user}', randomMember.user.username));
     } else {
-      if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(roast); else message.channel.send(roast);
+  if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(roast);
+  return message.channel.send(roast);
     }
     // Random emoji reaction
     if (Math.random() < 0.2) {

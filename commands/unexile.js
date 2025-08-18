@@ -40,15 +40,15 @@ module.exports = {
       const isSwagger = SWAGGER_MEMBERS.includes(target.id);
       if (isUncle && isSwagger) {
         await target.roles.add([ROLE_IDS.uncle, ROLE_IDS.swaggers]);
-        message.channel.send(`${target.user.username} the unc has been unexiled. with their lil swag too ig `);
+  if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(`${target.user.username} the unc has been unexiled. with their lil swag too ig `); else message.channel.send(`${target.user.username} the unc has been unexiled. with their lil swag too ig `);
       } else if (isUncle) {
         await target.roles.add(ROLE_IDS.uncle);
-        message.channel.send(`${target.user.username} the unc has been unexiled`);
+  if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(`${target.user.username} the unc has been unexiled`); else message.channel.send(`${target.user.username} the unc has been unexiled`);
       } else if (isSwagger) {
         await target.roles.add(ROLE_IDS.swaggers);
-        message.channel.send(`${target.user.username} has been unexiled. with their lil swag too ig`);
+  if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(`${target.user.username} has been unexiled. with their lil swag too ig`); else message.channel.send(`${target.user.username} has been unexiled. with their lil swag too ig`);
       } else {
-        message.channel.send(`${target.user.username} has been unexiled.`);
+  if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(`${target.user.username} has been unexiled.`); else message.channel.send(`${target.user.username} has been unexiled.`);
       }
     } catch (err) {
       console.error(err);

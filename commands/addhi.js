@@ -18,9 +18,9 @@ module.exports = {
     }
     try {
       await db.query(`INSERT INTO hi_usages (user_id, count) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET count = hi_usages.count + $2`, [target.id, amount]);
-      const text = `Added ${amount} hi to ${target.user.username}.`;
-      if (isInteraction) return message.reply({ content: text, ephemeral: true });
-      return message.channel.send(text);
+  const text = `Added ${amount} hi to ${target.user.username}.`;
+  if (isInteraction) return message.reply({ content: text, ephemeral: true });
+  return message.channel.send(text);
     } catch (err) {
       console.error(err);
       const text = 'Error adding hi entries.';
