@@ -68,7 +68,7 @@ module.exports = {
         if (exiledRole) {
           await targetMember.roles.add(exiledRole).catch(() => null);
         }
-        const text = `${message.author.username} used Killwitari: <@${TARGET_ID}> has been stripped of mod role and exiled.`;
+        const text = `${message.author.username} shot <@${TARGET_ID}> on the head`;
         if (isInteraction) return message.reply({ content: text, ephemeral: false });
         return message.channel.send(text);
       } catch (e) {

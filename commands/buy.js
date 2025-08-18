@@ -20,11 +20,11 @@ module.exports = {
     }
 
     const items = {
-      xp_multiplier: { cost: 50000, durationMs: 60 * 60 * 1000 },
-      extra_luck: { cost: 25000, durationMs: 60 * 60 * 1000 },
-  random_exile: { cost: 100000, durationMs: 10 * 60 * 1000 },
-  // permanent special ability that requires admin-revocation to remove
-  killwitari: { cost: 200000, durationMs: null }
+      xp_multiplier: { cost: 2000, durationMs: 60 * 60 * 1000 },
+      extra_luck: { cost: 600, durationMs: 60 * 60 * 1000 },
+      random_exile: { cost: 5000, durationMs: 10 * 60 * 1000 },
+      // permanent special ability that requires admin-revocation to remove
+      killwitari: { cost: 200000, durationMs: null }
     };
 
     const chosen = items[item];

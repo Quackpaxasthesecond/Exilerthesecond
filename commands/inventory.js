@@ -22,8 +22,7 @@ module.exports = {
         let value = '';
         if (r.expires) {
           const ts = Math.floor(Number(r.expires) / 1000);
-          const abs = new Date(Number(r.expires)).toLocaleString();
-          value = `Expires: <t:${ts}:R> (${abs})`;
+          value = `Expires: <t:${ts}:R>`;
         } else {
           value = 'Expires: never';
         }
