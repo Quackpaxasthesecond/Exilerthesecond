@@ -147,12 +147,18 @@ module.exports = {
   const active = await shopHelpers.getActiveEffects(db, userId).catch(() => ({}));
   const hiMult = active && active.hi_mult ? Number(active.hi_mult) : 1;
   const extraLuck = active && active.extra_luck ? Number(active.extra_luck) : 0;
+  const hasCavendish = active && active.cavendish;
   totalMultiplier *= hiMult;
 
   const finalIncrement = Math.max(1, Math.floor(hiIncrement * totalMultiplier));
+  // Cavendish permanent: 3x hi gain
+  if (hasCavendish) {
+    totalMultiplier *= 3;
+  }
+  const finalIncrementAdjusted = Math.max(1, Math.floor(hiIncrement * totalMultiplier));
     try {
-      await db.query(`INSERT INTO hi_usages (user_id, count) VALUES ($1, $2)
-        ON CONFLICT (user_id) DO UPDATE SET count = hi_usages.count + $2`, [userId, finalIncrement]);
+    await db.query(`INSERT INTO hi_usages (user_id, count) VALUES ($1, $2)
+      ON CONFLICT (user_id) DO UPDATE SET count = hi_usages.count + $2`, [userId, finalIncrementAdjusted]);
       // Hi crown logic omitted for brevity
     } catch (err) {
       console.error('Failed to increment hi usage or update hi crown:', err);

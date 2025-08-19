@@ -118,7 +118,37 @@ module.exports = {
     }
 
     gambleCooldowns.set(userId, now);
-    if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(resultMsg);
-    return message.channel.send(resultMsg);
+    if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply(resultMsg);
+    else await message.channel.send(resultMsg);
+
+    // Cavendish: every 4th gamble predicts and may break
+    try {
+      const shopHelpers2 = require('../lib/shopHelpers');
+      const active2 = await shopHelpers2.getActiveEffects(db, userId).catch(() => ({}));
+      if (active2 && active2.cavendish) {
+        // track gamble counts in-memory map on context
+        if (!global.cavGambles) global.cavGambles = {};
+        const cg = global.cavGambles;
+        cg[userId] = (cg[userId] || 0) + 1;
+        if (cg[userId] % 4 === 0) {
+          // prediction: we can prepend a note about predicted outcome
+          const prediction = win ? 'win' : 'lose';
+          // destruction chance base 1/6, scaled by extraLuckPct modestly
+          const baseChance = 1/6;
+          const luckScale = Math.min(1, extraLuckPct / 100); // 0..1
+          const destroyChance = Math.min(0.9, baseChance + baseChance * luckScale);
+          if (Math.random() < destroyChance) {
+            // destroy cavendish: delete permanent row
+            await db.query('DELETE FROM hi_shop_inventory WHERE user_id = $1 AND item = $2', [userId, 'cavendish']);
+            if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply(`Cavendish predicted you would ${prediction} — but it BROKE! The permanent is lost.`);
+            else await message.channel.send(`Cavendish predicted you would ${prediction} — but it BROKE! The permanent is lost.`);
+          } else {
+            if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply(`Cavendish predicted you would ${prediction} — it held.`);
+            else await message.channel.send(`Cavendish predicted you would ${prediction} — it held.`);
+          }
+        }
+      }
+    } catch (e) { /* ignore errors from cavendish handling */ }
+    return;
   }
 };
