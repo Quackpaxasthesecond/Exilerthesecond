@@ -112,7 +112,8 @@ module.exports = {
     if (!hiZone[userId] || hiZone[userId].expires < now) {
       if (Math.random() < 0.02) {
         hiZone[userId] = { expires: now + 10 * 60 * 1000 };
-  if (message._isFromInteraction || module.exports.postToChannel === false) message.reply(`${message.author.username} has entered the HI ZONE! 2x hi for 10 minutes! 🔥`); else message.channel.send(`${message.author.username} has entered the HI ZONE! 2x hi for 10 minutes! 🔥`);
+        if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply(`${authorName} has entered the HI ZONE! 2x hi for 10 minutes! 🔥`);
+        else await message.channel.send(`${authorName} has entered the HI ZONE! 2x hi for 10 minutes! 🔥`);
       }
     }
   // Increment hi usage count in DB with booster multiplier and temporary multipliers
@@ -141,13 +142,14 @@ module.exports = {
       }
     } catch (e) { /* ignore */ }
 
-    const finalIncrement = Math.max(1, Math.floor(hiIncrement * totalMultiplier));
   // Apply active shop effects (hi_mult, extra_luck) on hi usage awarding
   const shopHelpers = require('../lib/shopHelpers');
   const active = await shopHelpers.getActiveEffects(db, userId).catch(() => ({}));
   const hiMult = active && active.hi_mult ? Number(active.hi_mult) : 1;
   const extraLuck = active && active.extra_luck ? Number(active.extra_luck) : 0;
   totalMultiplier *= hiMult;
+
+  const finalIncrement = Math.max(1, Math.floor(hiIncrement * totalMultiplier));
     try {
       await db.query(`INSERT INTO hi_usages (user_id, count) VALUES ($1, $2)
         ON CONFLICT (user_id) DO UPDATE SET count = hi_usages.count + $2`, [userId, finalIncrement]);
