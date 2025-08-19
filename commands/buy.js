@@ -85,11 +85,11 @@ module.exports = {
           if (isInteraction) return message.reply({ content: text, ephemeral: true });
           return message.reply(text);
         }
-        // Deduct cost and record permanent purchase
-        await db.query('UPDATE hi_usages SET count = count - $1 WHERE user_id = $2', [50000, buyerId]);
-        const insertRes = await db.query('INSERT INTO hi_shop_inventory (user_id, item, metadata, expires, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING id', [buyerId, 'cavendish', JSON.stringify({}), null, now]);
-        const insertedId = insertRes.rows[0]?.id || null;
-  const text = `Successfully purchased Cavendish for 750 hi.${insertedId ? ` (purchase id: ${insertedId})` : ''}`;
+    // Deduct cost and record permanent purchase
+    await db.query('UPDATE hi_usages SET count = count - $1 WHERE user_id = $2', [chosen.cost, buyerId]);
+    const insertRes = await db.query('INSERT INTO hi_shop_inventory (user_id, item, metadata, expires, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING id', [buyerId, 'cavendish', JSON.stringify({}), null, now]);
+    const insertedId = insertRes.rows[0]?.id || null;
+    const text = `Successfully purchased Cavendish for ${chosen.cost} hi.${insertedId ? ` (purchase id: ${insertedId})` : ''}`;
         if (isInteraction) return message.reply({ content: text, ephemeral: true });
         return message.reply(text);
       }
@@ -102,7 +102,7 @@ module.exports = {
             return message.reply(text);
           }
           // Deduct cost and record permanent purchase
-          await db.query('UPDATE hi_usages SET count = count - $1 WHERE user_id = $2', [50000, buyerId]);
+          await db.query('UPDATE hi_usages SET count = count - $1 WHERE user_id = $2', [chosen.cost, buyerId]);
           const insertResP = await db.query('INSERT INTO hi_shop_inventory (user_id, item, metadata, expires, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING id', [buyerId, 'predictor', JSON.stringify({}), null, now]);
           const insertedIdP = insertResP.rows[0]?.id || null;
           const textP = `Successfully purchased Predictor for 50,000 hi.${insertedIdP ? ` (purchase id: ${insertedIdP})` : ''}`;

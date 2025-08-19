@@ -16,8 +16,10 @@ module.exports = {
       }
 
       const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-      // Build simplified items array
-      const items = res.rows.map(r => {
+  // Build simplified items array
+  const shopHelpers = require('../lib/shopHelpers');
+  const activeEffects = await shopHelpers.getActiveEffects(db, userId).catch(() => ({}));
+  const items = res.rows.map(r => {
         const item = r.item;
         let value = '';
         if (r.expires) {
@@ -34,6 +36,17 @@ module.exports = {
             if (md.multiplier !== undefined) mdParts.push(`mult: x${md.multiplier}`);
             if (md.target) mdParts.push(`target: ${md.target}`);
             if (mdParts.length) value += `\n${mdParts.join(' • ')}`;
+          }
+          // If this is cavendish, show its current break chance computed from active extra_luck
+          if (item === 'cavendish') {
+            try {
+              const extraLuck = Number(activeEffects.extra_luck || 0);
+              const baseChance = 1 / 6; // ~16.666%
+              const luckScale = Math.min(1, extraLuck / 100);
+              const destroyChance = Math.min(0.9, baseChance + baseChance * luckScale);
+              const pct = Math.round(destroyChance * 10000) / 100; // two decimals
+              value += `\nBreak chance on 4th gamble: ${pct}%`;
+            } catch (e) {}
           }
         } catch (e) {}
         return { name: item, value };
