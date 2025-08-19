@@ -121,34 +121,44 @@ module.exports = {
     if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply(resultMsg);
     else await message.channel.send(resultMsg);
 
-    // Cavendish: every 4th gamble predicts and may break
+    // Predictor and Cavendish: separate behaviors
     try {
       const shopHelpers2 = require('../lib/shopHelpers');
       const active2 = await shopHelpers2.getActiveEffects(db, userId).catch(() => ({}));
+      // Predictor: every 4th gamble reveals the outcome in advance (no destruction)
+      if (active2 && active2.predictor) {
+        if (!global.predGambles) global.predGambles = {};
+        const pg = global.predGambles;
+        pg[userId] = (pg[userId] || 0) + 1;
+        if (pg[userId] % 4 === 0) {
+          const prediction = win ? 'win' : 'lose';
+          if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply(`Predictor predicts you will ${prediction}.`);
+          else await message.channel.send(`Predictor predicts you will ${prediction}.`);
+        }
+      }
+
+      // Cavendish: every 4th gamble may be destroyed (no prediction messaging)
       if (active2 && active2.cavendish) {
-        // track gamble counts in-memory map on context
         if (!global.cavGambles) global.cavGambles = {};
         const cg = global.cavGambles;
         cg[userId] = (cg[userId] || 0) + 1;
         if (cg[userId] % 4 === 0) {
-          // prediction: we can prepend a note about predicted outcome
-          const prediction = win ? 'win' : 'lose';
-          // destruction chance base 1/6, scaled by extraLuckPct modestly
-          const baseChance = 1/6;
-          const luckScale = Math.min(1, extraLuckPct / 100); // 0..1
+          // destruction chance base 1/6, scaled by extra luck (0..1)
+          const baseChance = 1 / 6;
+          const luckScale = Math.min(1, (active2.extra_luck || 0) / 100);
           const destroyChance = Math.min(0.9, baseChance + baseChance * luckScale);
           if (Math.random() < destroyChance) {
-            // destroy cavendish: delete permanent row
             await db.query('DELETE FROM hi_shop_inventory WHERE user_id = $1 AND item = $2', [userId, 'cavendish']);
-            if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply(`Cavendish predicted you would ${prediction} — but it BROKE! The permanent is lost.`);
-            else await message.channel.send(`Cavendish predicted you would ${prediction} — but it BROKE! The permanent is lost.`);
+            if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply('Your Cavendish permanent broke and was lost.');
+            else await message.channel.send('Your Cavendish permanent broke and was lost.');
           } else {
-            if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply(`Cavendish predicted you would ${prediction} — it held.`);
-            else await message.channel.send(`Cavendish predicted you would ${prediction} — it held.`);
+            // optional: let user know it survived; keep this message subtle
+            if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply('Your Cavendish survived this gamble.');
+            else await message.channel.send('Your Cavendish survived this gamble.');
           }
         }
       }
-    } catch (e) { /* ignore errors from cavendish handling */ }
+    } catch (e) { /* ignore predictor/cavendish handling errors */ }
     return;
   }
 };
