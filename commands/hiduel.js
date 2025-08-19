@@ -16,10 +16,14 @@ module.exports = {
   execute: async (input, args, context) => {
     const isInteraction = typeof input?.isChatInputCommand === 'function' && input.isChatInputCommand();
     const message = input;
-    const challenger = message.author;
+    const challenger = message.author || message.user;
     const target = (isInteraction ? (args.getUser ? args.getUser('user') : null) : message.mentions.users.first());
-    if (!target || target.id === challenger.id) {
+    const botId = context && context.client && context.client.user ? context.client.user.id : null;
+    if (!target || target.id === (challenger && challenger.id)) {
       return message.reply('You must mention someone else to challenge to a HI DUEL!');
+    }
+    if (target.bot || (botId && target.id === botId)) {
+      return message.reply('You cannot challenge bots or the bot itself to a HI DUEL.');
     }
     const guildId = message.guild.id;
     if (hiDuels[guildId] && hiDuels[guildId].accepted && Date.now() < hiDuels[guildId].endTime) {

@@ -44,26 +44,32 @@ module.exports = {
     // Coin flip, modified by extra_luck
     const shopHelpers = require('../lib/shopHelpers');
     const active = await shopHelpers.getActiveEffects(db, userId).catch(() => ({}));
-    const extraLuckPct = active && active.extra_luck ? Number(active.extra_luck) : 0; // percentage points
-    // win chance is 50% base plus extraLuckPct percent (e.g. 10 => 60% win chance)
-    const winChance = Math.min(0.99, 0.5 + (extraLuckPct / 100));
-    const win = Math.random() < winChance;
-    // exile chance: base 2%, reduced by extra luck (each 10% luck reduces exile chance by 0.5%)
-    const exileBase = 0.02;
-    const exileReduction = Math.min(0.019, (extraLuckPct / 10) * 0.005);
-    const exileChance = Math.max(0, exileBase - exileReduction);
+  const extraLuckPct = active && active.extra_luck ? Number(active.extra_luck) : 0; // percentage points
+  // win chance is 50% base plus extraLuckPct percent (e.g. 10 => 60% win chance) but capped
+  const winChance = Math.min(0.95, 0.5 + (extraLuckPct / 100));
+  const win = Math.random() < winChance;
+  // exile chance: base 2%, increased by extra luck (each 10% luck increases exile chance by 0.5%)
+  const exileBase = 0.02;
+  const exileIncrease = Math.min(0.5, (extraLuckPct / 10) * 0.005);
+  const exileChance = Math.min(0.9, exileBase + exileIncrease);
 
     let resultMsg = '';
+    // compute payout reduction: more extra_luck => smaller normal win payout
+    // cap penalty at 90% to avoid zero payout
+    const luckPenalty = Math.min(0.9, extraLuckPct / 100);
     if (win) {
-      // 1% chance for 100x multiplier
+      // 1% chance for 100x multiplier (jackpot unaffected)
       if (Math.random() < 0.01) {
         const mult = 100;
         const winnings = amount * mult;
         await db.query('UPDATE hi_usages SET count = count + $1 WHERE user_id = $2', [winnings, userId]);
         resultMsg = `JACKPOT! You won the 100x mult and gained ${winnings} hi!`;
       } else {
-        await db.query('UPDATE hi_usages SET count = count + $1 WHERE user_id = $2', [amount, userId]);
-        resultMsg = `You won! Your hi count increased by ${amount}.`;
+        // normal win scaled down by luckPenalty
+        const gain = Math.max(1, Math.floor(amount * (1 - luckPenalty)));
+        await db.query('UPDATE hi_usages SET count = count + $1 WHERE user_id = $2', [gain, userId]);
+        const penaltyPct = Math.round(luckPenalty * 100);
+        resultMsg = `You won! Your hi count increased by ${gain} (reduced by ${penaltyPct}% due to extra luck).`;
       }
     } else {
       await db.query('UPDATE hi_usages SET count = count - $1 WHERE user_id = $2', [amount, userId]);
@@ -88,7 +94,8 @@ module.exports = {
             await member.roles.remove(ROLE_IDS.uncle).catch(() => null);
           }
         }
-        await db.query('INSERT INTO exiles (issuer, target) VALUES ($1, $2)', [message.author?.id || message.user?.id, userId]);
+  const issuerId = message.author?.id || message.user?.id || userId;
+  await db.query('INSERT INTO exiles (issuer, target) VALUES ($1, $2)', [issuerId, userId]);
         resultMsg += `\n<@${userId}> has been exiled by the gambling gods!`;
         // schedule unexile
         setTimeout(async () => {

@@ -12,14 +12,17 @@ module.exports = {
     // support both message-style and interaction-adapted messageLike
     const isInteraction = typeof input?.isChatInputCommand === 'function' && input.isChatInputCommand();
     const message = !isInteraction ? input : input; // index adapter provides message-like object for interactions
-    const { db, HI_STREAK_RESET, HI_CHAIN_WINDOW, HI_COMBO_WINDOW, FUNNY_EMOJIS, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS } = context;
+  const { db, HI_STREAK_RESET, HI_CHAIN_WINDOW, HI_COMBO_WINDOW, FUNNY_EMOJIS, ROLE_IDS, SPECIAL_MEMBERS, SWAGGER_MEMBERS } = context;
+  // unify author id/name for message and interaction adapters
+  const authorId = (message.author && message.author.id) || (message.user && message.user.id) || (message.member && message.member.user && message.member.user.id);
+  const authorName = (message.author && message.author.username) || (message.user && message.user.username) || (message.member && message.member.displayName) || 'Someone';
     // Block hi command in specific channels
     const HI_BLOCKED_CHANNELS = ['1374052923956269136', '1351976782131363880', '1208809645205094481'];
     if (HI_BLOCKED_CHANNELS.includes(message.channel.id)) {
       return message.reply('The -hi command is disabled in this channel.');
     }
     // --- Persistent Hi Streaks (6h reset) ---
-    const streakRes = await db.query('SELECT streak, last FROM hi_streaks WHERE user_id = $1', [message.author.id]);
+  const streakRes = await db.query('SELECT streak, last FROM hi_streaks WHERE user_id = $1', [authorId]);
     let streak = 1;
     let last = Date.now();
     if (streakRes.rows.length > 0) {
@@ -30,10 +33,10 @@ module.exports = {
         streak = streakRes.rows[0].streak + 1;
       }
     }
-    await db.query('INSERT INTO hi_streaks (user_id, streak, last) VALUES ($1, $2, to_timestamp($3 / 1000.0)) ON CONFLICT (user_id) DO UPDATE SET streak = $2, last = to_timestamp($3 / 1000.0)', [message.author.id, streak, Date.now()]);
+    await db.query('INSERT INTO hi_streaks (user_id, streak, last) VALUES ($1, $2, to_timestamp($3 / 1000.0)) ON CONFLICT (user_id) DO UPDATE SET streak = $2, last = to_timestamp($3 / 1000.0)', [authorId, streak, Date.now()]);
     if (streak > 1 && streak % 5 === 0) {
-      if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(`${message.author.username} is on a hi streak of ${streak}!`);
-      message.channel.send(`${message.author.username} is on a hi streak of ${streak}!`);
+      if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply(`${authorName} is on a hi streak of ${streak}!`);
+      else await message.channel.send(`${authorName} is on a hi streak of ${streak}!`);
     }
     // --- Persistent Hi Chain (guild-wide) ---
     const chainRes = await db.query('SELECT chain_count, chain_record, last_timestamp FROM hi_chains WHERE guild_id = $1', [message.guild.id]);
@@ -52,45 +55,46 @@ module.exports = {
     }
     await db.query('INSERT INTO hi_chains (guild_id, chain_count, chain_record, last_timestamp) VALUES ($1, $2, $3, to_timestamp($4 / 1000.0)) ON CONFLICT (guild_id) DO UPDATE SET chain_count = $2, chain_record = $3, last_timestamp = to_timestamp($4 / 1000.0)', [message.guild.id, chain, chainRecord, Date.now()]);
     if (chain > 1 && chain === chainRecord) {
-      if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(`New HI CHAIN RECORD! ${chainRecord} in a row! 🔥`);
-      message.channel.send(`New HI CHAIN RECORD! ${chainRecord} in a row! 🔥`);
+      if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply(`New HI CHAIN RECORD! ${chainRecord} in a row! 🔥`);
+      else await message.channel.send(`New HI CHAIN RECORD! ${chainRecord} in a row! 🔥`);
     }
     // Hi duel scoring
     const guildId = message.guild.id;
     if (hiDuels[guildId] && hiDuels[guildId].accepted && Date.now() < hiDuels[guildId].endTime) {
-      if (hiDuels[guildId].scores[message.author.id] === undefined) hiDuels[guildId].scores[message.author.id] = 0;
-      hiDuels[guildId].scores[message.author.id]++;
+  if (hiDuels[guildId].scores[authorId] === undefined) hiDuels[guildId].scores[authorId] = 0;
+  hiDuels[guildId].scores[authorId]++;
     }
     // Hi combo
     if (!context.hiState) context.hiState = { comboUsers: [], comboTimeout: null };
     const hiState = context.hiState;
-    if (!hiState.comboUsers.includes(message.author.username)) {
-      hiState.comboUsers.push(message.author.username);
+    if (!hiState.comboUsers.includes(authorName)) {
+      hiState.comboUsers.push(authorName);
     }
     if (hiState.comboTimeout) clearTimeout(hiState.comboTimeout);
-      hiState.comboTimeout = setTimeout(() => {
+      hiState.comboTimeout = setTimeout(async () => {
       if (hiState.comboUsers.length > 1) {
-    if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(`HI COMBO! ${hiState.comboUsers.join(', ')}! \uD83D\uDCA5`);
-    return message.channel.send(`HI COMBO! ${hiState.comboUsers.join(', ')}! \uD83D\uDCA5`);
+        if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply(`HI COMBO! ${hiState.comboUsers.join(', ')}! \uD83D\uDCA5`);
+        else await message.channel.send(`HI COMBO! ${hiState.comboUsers.join(', ')}! \uD83D\uDCA5`);
       }
       hiState.comboUsers = [];
     }, HI_COMBO_WINDOW);
     // Pick a random member and roast them
   const members = await message.guild.members.fetch();
-    const filtered = members.filter(m => !m.user.bot && m.id !== message.author.id);
-    if (filtered.size === 0) return message.reply("you will die....");
+    const filtered = members.filter(m => !m.user.bot && m.id !== authorId);
+    if (filtered.size === 0) await message.reply("you will die....");
     const randomMember = filtered.random();
     const roast = roasts[Math.floor(Math.random() * roasts.length)];
     // Fix: Actually use RNG for roast/image, not just quotes
     if (roast.startsWith('http')) {
-  if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(roast);
-  return message.channel.send(roast);
+      if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply(roast);
+      else await message.channel.send(roast);
     } else if (roast.includes('{user}')) {
-  if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(roast.replace('{user}', randomMember.user.username));
-  return message.channel.send(roast.replace('{user}', randomMember.user.username));
+      const roastText = roast.replace('{user}', randomMember.user.username);
+      if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply(roastText);
+      else await message.channel.send(roastText);
     } else {
-  if (message._isFromInteraction || module.exports.postToChannel === false) return message.reply(roast);
-  return message.channel.send(roast);
+      if (message._isFromInteraction || module.exports.postToChannel === false) await message.reply(roast);
+      else await message.channel.send(roast);
     }
     // Random emoji reaction
     if (Math.random() < 0.2) {
@@ -102,7 +106,7 @@ module.exports = {
     // --- HI ZONE 2x Multiplier ---
     if (!context.hiZone) context.hiZone = {};
     const hiZone = context.hiZone;
-    const userId = message.author.id;
+  const userId = authorId;
     const now = Date.now();
     // 2% chance to enter HI ZONE for 10 minutes
     if (!hiZone[userId] || hiZone[userId].expires < now) {
@@ -138,14 +142,15 @@ module.exports = {
     } catch (e) { /* ignore */ }
 
     const finalIncrement = Math.max(1, Math.floor(hiIncrement * totalMultiplier));
-  // Apply active shop effects (xp_multiplier, extra_luck) on hi usage awarding
+  // Apply active shop effects (hi_mult, extra_luck) on hi usage awarding
   const shopHelpers = require('../lib/shopHelpers');
-  const active = await shopHelpers.getActiveEffects(db, message.author.id).catch(() => ({}));
-  const xpMultiplier = active && active.xp_multiplier ? active.xp_multiplier : 1;
-  const extraLuck = active && active.extra_luck ? active.extra_luck : 0;
+  const active = await shopHelpers.getActiveEffects(db, userId).catch(() => ({}));
+  const hiMult = active && active.hi_mult ? Number(active.hi_mult) : 1;
+  const extraLuck = active && active.extra_luck ? Number(active.extra_luck) : 0;
+  totalMultiplier *= hiMult;
     try {
       await db.query(`INSERT INTO hi_usages (user_id, count) VALUES ($1, $2)
-        ON CONFLICT (user_id) DO UPDATE SET count = hi_usages.count + $2`, [message.author.id, finalIncrement]);
+        ON CONFLICT (user_id) DO UPDATE SET count = hi_usages.count + $2`, [userId, finalIncrement]);
       // Hi crown logic omitted for brevity
     } catch (err) {
       console.error('Failed to increment hi usage or update hi crown:', err);
