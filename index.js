@@ -155,6 +155,13 @@ db.query(`
   );
 `).catch(err => console.error('Could not create killwitari_cooldowns table:', err));
 
+db.query(`
+  CREATE TABLE IF NOT EXISTS shade_gambit_cooldowns (
+    user_id TEXT PRIMARY KEY,
+    last_used BIGINT
+  );
+`).catch(err => console.error('Could not create shade_gambit_cooldowns table:', err));
+
 // --- Utility ---
 const timers = new Map();
 const cooldowns = new Map();

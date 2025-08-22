@@ -19,6 +19,11 @@ module.exports = {
   // Build simplified items array
   const shopHelpers = require('../lib/shopHelpers');
   const activeEffects = await shopHelpers.getActiveEffects(db, userId).catch(() => ({}));
+  // fetch Shade's Gambit cooldown info (if any)
+  let shadeCooldownRow = null;
+  try {
+    shadeCooldownRow = await db.query('SELECT last_used FROM shade_gambit_cooldowns WHERE user_id = $1', [userId]);
+  } catch (e) { shadeCooldownRow = null; }
   const items = res.rows.map(r => {
         const item = r.item;
         let value = '';
@@ -46,6 +51,21 @@ module.exports = {
               const destroyChance = Math.min(0.9, baseChance + baseChance * luckScale);
               const pct = Math.round(destroyChance * 10000) / 100; // two decimals
               value += `\nBreak chance on 4th gamble: ${pct}%`;
+            } catch (e) {}
+          }
+          // If this is shade_gambit, show cooldown remaining (2h) and next available time
+          if (item === 'shade_gambit') {
+            try {
+              const COOLDOWN = 2 * 60 * 60 * 1000;
+              const now = Date.now();
+              const last = shadeCooldownRow && shadeCooldownRow.rows && shadeCooldownRow.rows[0] ? Number(shadeCooldownRow.rows[0].last_used || 0) : 0;
+              if (last && now - last < COOLDOWN) {
+                const next = last + COOLDOWN;
+                const ts = Math.floor(next / 1000);
+                value += `\nNext available: <t:${ts}:R>`;
+              } else {
+                value += `\nReady now`;
+              }
             } catch (e) {}
           }
         } catch (e) {}

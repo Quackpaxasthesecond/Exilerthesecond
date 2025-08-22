@@ -25,8 +25,9 @@ module.exports = {
   // random_exile removed
       // permanent special ability that requires admin-revocation to remove
   cavendish: { cost: 750, durationMs: null },
-  predictor: { cost: 50000, durationMs: null },
-  killwitari: { cost: 200000, durationMs: null }
+    predictor: { cost: 50000, durationMs: null },
+    shade_gambit: { cost: 25000, durationMs: null },
+  // killwitari removed from shop (disabled)
     };
 
     const chosen = items[item];
@@ -109,6 +110,21 @@ module.exports = {
           if (isInteraction) return message.reply({ content: textP, ephemeral: true });
           return message.reply(textP);
         }
+
+      if (item === 'shade_gambit') {
+        const owned = await db.query('SELECT id FROM hi_shop_inventory WHERE user_id = $1 AND item = $2 AND expires IS NULL', [buyerId, 'shade_gambit']);
+        if (owned.rows.length > 0) {
+          const text = 'You already own Shade\'s Gambit (one per user).';
+          if (isInteraction) return message.reply({ content: text, ephemeral: true });
+          return message.reply(text);
+        }
+        await db.query('UPDATE hi_usages SET count = count - $1 WHERE user_id = $2', [chosen.cost, buyerId]);
+        const insertResSG = await db.query('INSERT INTO hi_shop_inventory (user_id, item, metadata, expires, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING id', [buyerId, 'shade_gambit', JSON.stringify({}), null, now]);
+        const insertedIdSG = insertResSG.rows[0]?.id || null;
+        const textSG = `Successfully purchased Shade's Gambit for ${chosen.cost} hi.${insertedIdSG ? ` (purchase id: ${insertedIdSG})` : ''}`;
+        if (isInteraction) return message.reply({ content: textSG, ephemeral: true });
+        return message.reply(textSG);
+      }
 
       // Timed items (hi_mult, extra_luck)
       const expires = chosen.durationMs ? now + chosen.durationMs : null;

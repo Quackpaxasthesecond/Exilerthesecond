@@ -14,7 +14,8 @@ module.exports = {
   { name: 'extra_luck', value: '+10% gamble luck for 60 minutes   Cost: 600 hi', inline: false },
   { name: 'cavendish', value: 'Permanent ability: 3x HI gain; 1/6 chance to be destroyed (increases with luck) — Cost: 750 hi', inline: false },
   { name: 'predictor', value: 'Permanent ability: every 4th gamble reveals the outcome in advance — Cost: 50,000 hi', inline: false },
-  { name: 'killwitari', value: 'Permanent ability: kills witari — Cost: 200,000 hi — good luck buying it', inline: false }
+  // killwitari removed from public shop
+  { name: 'shade_gambit', value: "Permanent ability: Challenge a target to a 3-coin flip duel (user vs target). Most matching heads/tails wins; loser is exiled. 2h cooldown. Cost: 25,000 hi", inline: false }
       )
       .setFooter({ text: 'Use -buy <item> to purchase. Example: -buy extra_luck' });
 
